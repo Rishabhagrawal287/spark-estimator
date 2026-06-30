@@ -1,1 +1,1460 @@
-<h1>Spark Estimator - Coming Soon</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Spark Estimator"/>
+  <meta name="theme-color" content="#0f172a"/>
+  <title>Spark Estimator</title>
+
+  <!-- CDNs -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <style>
+    /* ── Fonts ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; overscroll-behavior: none; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f0f4f8;
+      color: #0f172a;
+    }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* ── Safe areas ── */
+    .pt-safe { padding-top: max(16px, env(safe-area-inset-top)); }
+    .pb-safe { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+    .mb-safe { margin-bottom: max(16px, env(safe-area-inset-bottom)); }
+
+    /* ── Scrollbars hidden ── */
+    .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .scroll-x::-webkit-scrollbar { display: none; }
+    .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    /* ── Design tokens ── */
+    :root {
+      --blue-900: #0f172a;
+      --blue-800: #1e293b;
+      --blue-700: #334155;
+      --blue-600: #475569;
+      --blue-400: #60a5fa;
+      --blue-300: #93c5fd;
+      --blue-100: #dbeafe;
+      --blue-50:  #eff6ff;
+      --accent:   #1d4ed8;
+      --accent-light: #3b82f6;
+      --surface:  #ffffff;
+      --surface-2:#f8fafc;
+      --border:   #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-1:   #0f172a;
+      --text-2:   #475569;
+      --text-3:   #94a3b8;
+      --green:    #10b981;
+      --yellow:   #f59e0b;
+      --red:      #ef4444;
+      --radius-card: 16px;
+      --radius-sm: 8px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+      --shadow-float: 0 8px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ── Bloomberg-style header ── */
+    #app-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: var(--blue-900);
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      will-change: transform;
+    }
+    #app-header.shrunk {
+      box-shadow: var(--shadow-float);
+    }
+    #app-header.shrunk #header-expanded { max-height: 0; opacity: 0; overflow: hidden; }
+    #app-header.shrunk #header-compact { opacity: 1; pointer-events: auto; }
+    #header-expanded {
+      max-height: 200px;
+      overflow: hidden;
+      transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+    }
+    #header-compact {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    /* ── Animated total counter ── */
+    .total-display {
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .total-display.bump {
+      transform: scale(1.06);
+      color: #93c5fd;
+    }
+
+    /* ── Progress ring ── */
+    .progress-ring { transform: rotate(-90deg); }
+    .progress-ring-fill {
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);
+      stroke-linecap: round;
+    }
+
+    /* ── Section tabs ── */
+    .section-tab {
+      position: relative;
+      flex-shrink: 0;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--text-3);
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+      background: none;
+      border-top: none; border-left: none; border-right: none;
+      cursor: pointer;
+    }
+    .section-tab.active {
+      color: var(--accent-light);
+      border-bottom-color: var(--accent-light);
+    }
+    .section-tab .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      margin-left: 6px;
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--accent);
+      color: white;
+    }
+
+    /* ── Group cards ── */
+    .group-card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .group-card.has-checked {
+      border-color: var(--blue-300);
+      box-shadow: 0 0 0 1px var(--blue-300), var(--shadow-card);
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      gap: 10px;
+    }
+    .group-chevron {
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+    .group-card.open .group-chevron { transform: rotate(180deg); }
+    .group-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+    .group-card.open .group-body { max-height: 2000px; }
+    .group-items { padding: 0 10px 10px; }
+
+    /* ── Swipeable item cards ── */
+    .item-wrap {
+      position: relative;
+      margin-bottom: 6px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .item-bg-check {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      padding-left: 20px;
+      border-radius: 12px;
+    }
+    .item-bg-clear {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(270deg, #ef4444 0%, #f87171 100%);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 20px;
+      border-radius: 12px;
+    }
+    .item-card {
+      position: relative;
+      background: var(--surface-2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.08s ease, background 0.2s;
+      will-change: transform;
+      touch-action: pan-y;
+      z-index: 1;
+    }
+    .item-card.is-checked {
+      background: #eff6ff;
+      border-color: var(--blue-300);
+    }
+    .item-card.no-action {
+      background: #f8fafc;
+    }
+    .item-card.no-action.is-checked {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+
+    /* ── Inline qty row ── */
+    .qty-row {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+    }
+    .item-card.is-checked .qty-row {
+      max-height: 120px;
+      opacity: 1;
+    }
+    .qty-input {
+      width: 80px;
+      padding: 6px 10px;
+      font-size: 16px; /* prevents iOS zoom */
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      border: 1.5px solid var(--border-strong);
+      border-radius: 8px;
+      background: white;
+      color: var(--text-1);
+      text-align: right;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .qty-input:focus {
+      border-color: var(--accent-light);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    /* ── Cost chip (tappable to edit) ── */
+    .cost-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--blue-50);
+      border: 1px solid var(--blue-100);
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cost-chip:active { background: var(--blue-100); }
+
+    /* ── Line total ── */
+    .line-total {
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--accent);
+      min-width: 60px;
+      text-align: right;
+    }
+    .line-total.zero { color: var(--text-3); }
+
+    /* ── Bottom nav ── */
+    #bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      z-index: 100;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+    }
+
+    /* ── Side panel ── */
+    #side-panel {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: min(320px, 88vw);
+      background: var(--blue-900);
+      z-index: 300;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      display: flex;
+      flex-direction: column;
+    }
+    #side-panel.open { transform: translateX(0); }
+    #panel-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 299;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      backdrop-filter: blur(2px);
+    }
+    #panel-overlay.show { opacity: 1; pointer-events: auto; }
+
+    /* ── Modal ── */
+    #modal-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 400;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    #modal-wrap.show { opacity: 1; pointer-events: auto; }
+    #modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    #modal-box {
+      position: relative;
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: var(--shadow-float);
+      transform: scale(0.95) translateY(8px);
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #modal-wrap.show #modal-box { transform: scale(1) translateY(0); }
+
+    /* ── Settings sheet ── */
+    #settings-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 400;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    #settings-sheet.show { opacity: 1; pointer-events: auto; }
+    #settings-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
+    #settings-box {
+      position: relative;
+      width: 100%;
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      box-shadow: var(--shadow-float);
+      transform: translateY(40px);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+    #settings-sheet.show #settings-box { transform: translateY(0); }
+
+    /* ── Deal analyzer ── */
+    .deal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .deal-badge.green  { background: #d1fae5; color: #065f46; }
+    .deal-badge.yellow { background: #fef3c7; color: #92400e; }
+    .deal-badge.red    { background: #fee2e2; color: #991b1b; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--blue-800);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 500;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Sub-tabs (rooms) ── */
+    .room-tab-bar {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      padding: 0 4px;
+    }
+    .room-tab-bar::-webkit-scrollbar { display: none; }
+    .room-tab {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-3);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+      background: none;
+      border-top: none; border-left: none; border-right: none;
+    }
+    .room-tab.active { color: var(--accent-light); border-bottom-color: var(--accent-light); }
+    .room-tab-add {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      font-size: 18px;
+      color: var(--accent-light);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* ── Photo grid ── */
+    .photo-thumb {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1.5px solid var(--border);
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-remove {
+      position: absolute;
+      top: -4px; right: -4px;
+      width: 20px; height: 20px;
+      background: #ef4444;
+      color: white;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid white;
+      cursor: pointer;
+    }
+    .photo-add-btn {
+      width: 72px; height: 72px;
+      border-radius: 10px;
+      border: 1.5px dashed var(--border-strong);
+      background: var(--surface-2);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .photo-add-btn:active { border-color: var(--accent-light); color: var(--accent-light); }
+
+    /* ── Summary screen ── */
+    .summary-section {
+      background: white;
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+    .summary-section-header {
+      padding: 12px 16px;
+      background: var(--blue-900);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ── Misc utilities ── */
+    .btn-primary {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      padding: 13px 20px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary:active { background: #1e40af; transform: scale(0.98); }
+    .btn-secondary {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px;
+      background: white;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 13px 20px;
+      border-radius: 12px;
+      border: 2px solid var(--accent);
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-secondary:active { background: var(--blue-50); transform: scale(0.98); }
+    .btn-ghost {
+      background: none; border: none; cursor: pointer; padding: 8px;
+      color: var(--text-3); border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-ghost:active { background: rgba(255,255,255,0.1); color: white; }
+
+    /* Divider pill */
+    .sheet-pill {
+      width: 36px; height: 4px;
+      background: var(--border-strong);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-3);
+    }
+
+    /* ── Year input tag ── */
+    .year-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      font-size: 11px;
+      font-weight: 600;
+      color: #92400e;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ════════════════════════════════════════
+     SIDE PANEL — Project Switcher
+═════════════════════════════════════════ -->
+<div id="panel-overlay"></div>
+<div id="side-panel">
+  <div class="pt-safe px-5 pb-4" style="background:var(--blue-900)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;color:var(--blue-400);text-transform:uppercase;margin-bottom:2px">Spark Homes</div>
+        <div style="font-size:18px;font-weight:800;color:white">Projects</div>
+      </div>
+      <button class="btn-ghost" onclick="closePanel()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="panel-list" class="scroll-y flex-1" style="padding:8px 0"></div>
+  <div style="padding:16px;border-top:1px solid rgba(255,255,255,0.08);" class="pb-safe">
+    <button class="btn-primary" onclick="newProject()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Estimate
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MODAL — Rename / Confirm
+═════════════════════════════════════════ -->
+<div id="modal-wrap">
+  <div id="modal-bg" onclick="closeModal()"></div>
+  <div id="modal-box">
+    <h3 id="modal-title" style="font-size:17px;font-weight:700;color:var(--text-1);margin:0 0 16px"></h3>
+    <input id="modal-input" type="text" style="width:100%;padding:12px 14px;font-size:16px;border:1.5px solid var(--border-strong);border-radius:10px;outline:none;font-family:inherit;color:var(--text-1)" placeholder="" />
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-secondary" onclick="closeModal()" style="font-size:14px">Cancel</button>
+      <button class="btn-primary" onclick="confirmModal()" style="font-size:14px" id="modal-confirm-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SETTINGS SHEET
+═════════════════════════════════════════ -->
+<div id="settings-sheet">
+  <div id="settings-bg" onclick="closeSettings()"></div>
+  <div id="settings-box">
+    <div class="sheet-pill"></div>
+    <h2 style="font-size:18px;font-weight:800;color:var(--text-1);margin:0 0 4px">Settings</h2>
+    <p style="font-size:13px;color:var(--text-3);margin:0 0 20px">Price schedule & preferences</p>
+
+    <h3 style="font-size:13px;font-weight:700;color:var(--text-2);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.06em">Price Schedule</h3>
+    <p style="font-size:12px;color:var(--text-3);margin:0 0 12px;line-height:1.5">Upload a CSV with <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11px">id</code> and <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11px">cost</code> columns to update prices globally.</p>
+    <div id="price-status" style="padding:10px 14px;background:var(--surface-2);border-radius:10px;font-size:12px;color:var(--text-3);margin-bottom:12px;border:1px solid var(--border)">Using default prices from Pricing_List.csv</div>
+    <label style="display:block;cursor:pointer;margin-bottom:8px">
+      <div class="btn-primary" style="font-size:13px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Updated Prices (CSV)
+      </div>
+      <input type="file" accept=".csv,.CSV" id="price-csv-input" style="display:none" onchange="handleCsvUpload(this)"/>
+    </label>
+    <button id="reset-prices-btn" onclick="resetPrices()" style="display:none;width:100%;padding:11px;border-radius:10px;border:1.5px solid #fecaca;background:none;color:#ef4444;font-size:13px;font-weight:600;cursor:pointer">Reset to Default Prices</button>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0"/>
+    <h3 style="font-size:13px;font-weight:700;color:var(--text-2);margin:0 0 10px;text-transform:uppercase;letter-spacing:0.06em">Agent Info</h3>
+    <input id="agent-name-input" type="text" placeholder="Your name (appears on export)" style="width:100%;padding:11px 14px;font-size:15px;border:1.5px solid var(--border-strong);border-radius:10px;outline:none;font-family:inherit;color:var(--text-1);margin-bottom:8px" oninput="state.agentName=this.value;scheduleSave()"/>
+    <button class="btn-primary" onclick="closeSettings()" style="font-size:14px;margin-top:4px">Done</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     INLINE COST EDIT SHEET
+═════════════════════════════════════════ -->
+<div id="cost-edit-sheet" style="position:fixed;inset:0;z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.25s">
+  <div id="cost-edit-bg" onclick="closeCostEdit()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px)"></div>
+  <div id="cost-edit-box" style="position:relative;width:100%;background:white;border-radius:24px 24px 0 0;padding:24px 20px;padding-bottom:max(24px,env(safe-area-inset-bottom));box-shadow:var(--shadow-float);transform:translateY(40px);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)">
+    <div class="sheet-pill"></div>
+    <h3 id="cost-edit-title" style="font-size:16px;font-weight:700;color:var(--text-1);margin:0 0 4px">Edit Unit Cost</h3>
+    <p id="cost-edit-unit" style="font-size:12px;color:var(--text-3);margin:0 0 16px"></p>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:22px;font-weight:700;color:var(--text-2)">$</span>
+      <input id="cost-edit-input" type="number" step="0.01" min="0" inputmode="decimal" style="flex:1;padding:13px 14px;font-size:20px;font-family:'DM Mono',monospace;font-weight:600;border:2px solid var(--accent-light);border-radius:12px;outline:none;color:var(--text-1)" />
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" onclick="closeCostEdit()" style="font-size:14px">Cancel</button>
+      <button class="btn-primary" onclick="saveCostEdit()" style="font-size:14px">Update Price</button>
+    </div>
+    <button id="cost-reset-btn" onclick="resetItemCost()" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;font-size:12px;color:var(--text-3);cursor:pointer">Reset to default</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     TOAST
+═════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════
+     HIDDEN PHOTO INPUT
+═════════════════════════════════════════ -->
+<input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoCapture(this)"/>
+
+<!-- ════════════════════════════════════════
+     MAIN APP
+═════════════════════════════════════════ -->
+<div id="app"></div>
+
+<script>
+'use strict';
+
+// ╔══════════════════════════════════════════╗
+// ║           PHASE 1: SHELL & STATE         ║
+// ╚══════════════════════════════════════════╝
+
+// ── SVG Icons ─────────────────────────────
+const ICONS = {
+  menu:     `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+  settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  export:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  pencil:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+  check:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  chevDown: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  camera:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2l2-3h8l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  spark:    `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+  swipeR:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  swipeL:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  money:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L6 7h12l-2-4z"/><circle cx="12" cy="14" r="2"/></svg>`,
+  back:     `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+};
+
+// ── Constants ──────────────────────────────
+const STORAGE_KEY    = 'sparkEstimator_v3';
+const PRICES_KEY     = 'sparkPrices_v3';
+const AGENT_KEY      = 'sparkAgent_v1';
+
+// ── Data Layer (Phase 2 placeholder) ──────
+// Full CATEGORIES, GROUPS, calc functions will be injected in Phase 2.
+// For Phase 1 we define stubs so the shell renders without errors.
+const CATEGORIES = []; // → replaced in Phase 2
+const GROUPS = {};     // → replaced in Phase 2
+
+function calcRunningTotal() { return Object.values(state.items).reduce((t,s)=>{ if(!s||!s.checked)return t; const def=findItemDef(s._id); if(!def)return t; const q=parseFloat(s.qty)||0; if(!q)return t; const c=getItemCost(def); const raw=q*c; return t+(def.min?Math.max(raw,def.min):raw); },0); }
+function calcCategoryTotal(cat) { if(!cat)return 0; if(cat.type==='multi'){ return (state.bathrooms?.instances||[]).reduce((t,b)=>t+calcBathTotal(b),0)+(state.bedrooms?.instances||[]).reduce((t,b)=>t+calcRoomTotal(b,'bedroom'),0)+(state.livingAreas?.instances||[]).reduce((t,la)=>t+calcRoomTotal(la,'living'),0); } return (cat.items||[]).reduce((t,item)=>{ const s=state.items[item.id]; if(!s||!s.checked)return t; const q=parseFloat(s.qty)||0; if(!q)return t; const c=getItemCost(item); const raw=q*c; return t+(item.min?Math.max(raw,item.min):raw); },0); }
+function calcBathTotal(bath) { return 0; } // stub — Phase 2
+function calcRoomTotal(room,type) { return 0; } // stub — Phase 2
+function calcProgress() { return {checked:0,total:19}; } // stub — Phase 2
+
+// ── Price overrides ────────────────────────
+function loadPriceOverrides() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)||'{}'); } catch { return {}; } }
+function savePriceOverrides() { try { localStorage.setItem(PRICES_KEY,JSON.stringify(state.priceOverrides)); } catch {} }
+function getItemCost(item) { if(!item)return 0; const ov=state.priceOverrides?.[item.id]; return ov!==undefined?ov:item.cost; }
+function findItemDef(id) { if(!id)return null; if(id.includes(':')){ const parts=id.split(':'); const realId=parts[parts.length-1]; return CATEGORIES.flatMap(c=>c.items||[]).find(i=>i.id===realId)||null; } return CATEGORIES.flatMap(c=>c.items||[]).find(i=>i.id===id)||null; }
+
+// ── State ──────────────────────────────────
+const state = {
+  view: 'main',           // 'main' | 'summary'
+  currentCat: 0,
+  currentProjectId: null,
+  currentProjectName: 'New Estimate',
+  items: {},
+  photos: {},
+  priceOverrides: {},
+  expandedGroups: new Set(),
+  agentName: '',
+  arv: '',
+  purchasePrice: '',
+  bathrooms: { instances: [{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}], current: 0 },
+  bedrooms:  { instances: [{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}], current: 0 },
+  livingAreas: { instances: [{id:'la1',name:'Living / Common'}], current: 0 },
+};
+
+// ── localStorage ───────────────────────────
+function loadProjects() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); } catch { return []; } }
+function saveProjects(list) { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(list)); } catch { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(list.map(p=>({...p,photos:{}})))); } catch {} } }
+function saveCurrentState() {
+  if(!state.currentProjectId) return;
+  const list = loadProjects();
+  const snap = {
+    id: state.currentProjectId,
+    name: state.currentProjectName,
+    savedAt: new Date().toISOString(),
+    items: state.items,
+    photos: state.photos,
+    bathroomInstances: state.bathrooms.instances,
+    bedroomInstances: state.bedrooms.instances,
+    livingAreaInstances: state.livingAreas.instances,
+    arv: state.arv,
+    purchasePrice: state.purchasePrice,
+  };
+  const idx = list.findIndex(p=>p.id===state.currentProjectId);
+  if(idx>=0) list[idx]=snap; else list.unshift(snap);
+  saveProjects(list);
+}
+let _saveTimer;
+function scheduleSave() { clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>{ saveCurrentState(); showToast('Saved'); },900); }
+
+function initBlankState() {
+  state.items = {};
+  state.photos = {};
+  state.arv = '';
+  state.purchasePrice = '';
+  state.expandedGroups = new Set();
+  CATEGORIES.forEach(cat=>{
+    if(cat.type==='multi') return;
+    (cat.items||[]).forEach(item=>{ state.items[item.id]={_id:item.id,checked:false,qty:'',year:''}; });
+  });
+  // Bathroom instances
+  state.bathrooms.instances.forEach(b=>{
+    const bathCat = CATEGORIES.find(c=>c.id==='bathroom');
+    (bathCat?.items||[]).forEach(item=>{ state.items[`${b.id}:${item.id}`]={_id:`${b.id}:${item.id}`,checked:false,qty:'',year:''}; });
+  });
+  // Bedroom instances
+  state.bedrooms.instances.forEach(b=>{
+    const bdCat = CATEGORIES.find(c=>c.id==='bedroom');
+    (bdCat?.items||[]).forEach(item=>{ state.items[`${b.id}:${item.id}`]={_id:`${b.id}:${item.id}`,checked:false,qty:'',year:''}; });
+  });
+  // Living area instances
+  state.livingAreas.instances.forEach(la=>{
+    const laCat = CATEGORIES.find(c=>c.id==='living');
+    (laCat?.items||[]).forEach(item=>{ state.items[`${la.id}:${item.id}`]={_id:`${la.id}:${item.id}`,checked:false,qty:'',year:''}; });
+  });
+}
+
+function loadProjectIntoState(proj) {
+  state.currentProjectId = proj.id;
+  state.currentProjectName = proj.name;
+  state.items = proj.items || {};
+  state.photos = proj.photos || {};
+  state.arv = proj.arv || '';
+  state.purchasePrice = proj.purchasePrice || '';
+  state.bathrooms.instances = proj.bathroomInstances || [{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}];
+  state.bedrooms.instances = proj.bedroomInstances || [{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}];
+  state.livingAreas.instances = proj.livingAreaInstances || [{id:'la1',name:'Living / Common'}];
+  state.bathrooms.current = 0;
+  state.bedrooms.current = 0;
+  state.livingAreas.current = 0;
+  state.currentCat = 0;
+  state.view = 'main';
+  state.expandedGroups = new Set();
+  // Fill missing keys for any new items added since last save
+  CATEGORIES.forEach(cat=>{
+    if(cat.type==='multi') return;
+    (cat.items||[]).forEach(item=>{ if(!state.items[item.id]) state.items[item.id]={_id:item.id,checked:false,qty:'',year:''}; });
+  });
+  state.bathrooms.instances.forEach(b=>{
+    const bathCat=CATEGORIES.find(c=>c.id==='bathroom');
+    (bathCat?.items||[]).forEach(item=>{ const k=`${b.id}:${item.id}`; if(!state.items[k]) state.items[k]={_id:k,checked:false,qty:'',year:''}; });
+  });
+  state.bedrooms.instances.forEach(b=>{
+    const bdCat=CATEGORIES.find(c=>c.id==='bedroom');
+    (bdCat?.items||[]).forEach(item=>{ const k=`${b.id}:${item.id}`; if(!state.items[k]) state.items[k]={_id:k,checked:false,qty:'',year:''}; });
+  });
+  state.livingAreas.instances.forEach(la=>{
+    const laCat=CATEGORIES.find(c=>c.id==='living');
+    (laCat?.items||[]).forEach(item=>{ const k=`${la.id}:${item.id}`; if(!state.items[k]) state.items[k]={_id:k,checked:false,qty:'',year:''}; });
+  });
+}
+
+// ── Project Management ─────────────────────
+function newProject() {
+  saveCurrentState();
+  state.currentProjectId = 'p_' + Date.now();
+  state.currentProjectName = 'New Estimate';
+  state.bathrooms.instances = [{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}];
+  state.bedrooms.instances = [{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}];
+  state.livingAreas.instances = [{id:'la1',name:'Living / Common'}];
+  state.agentName = localStorage.getItem(AGENT_KEY)||'';
+  initBlankState();
+  saveCurrentState();
+  closePanel();
+  render();
+  showToast('New estimate created');
+}
+
+function switchProject(id) {
+  if(id===state.currentProjectId){ closePanel(); return; }
+  saveCurrentState();
+  const proj = loadProjects().find(p=>p.id===id);
+  if(proj){ loadProjectIntoState(proj); render(); }
+  closePanel();
+}
+
+function renameProject(id, currentName) {
+  openModal('Rename Estimate', 'e.g. 123 Main St, Tulsa', currentName, (name)=>{
+    const list = loadProjects();
+    const proj = list.find(p=>p.id===id);
+    if(proj){ proj.name=name; saveProjects(list); }
+    if(id===state.currentProjectId){ state.currentProjectName=name; renderHeader(); }
+    refreshPanelList();
+    showToast('Renamed');
+  });
+}
+
+function deleteProject(id, name) {
+  if(!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  saveProjects(loadProjects().filter(p=>p.id!==id));
+  if(id===state.currentProjectId){ newProject(); }
+  else refreshPanelList();
+  showToast('Deleted');
+}
+
+// ── Modal ──────────────────────────────────
+let _modalCallback = null;
+function openModal(title, placeholder, defaultVal, onConfirm) {
+  _modalCallback = onConfirm;
+  document.getElementById('modal-title').textContent = title;
+  const inp = document.getElementById('modal-input');
+  inp.placeholder = placeholder||'';
+  inp.value = defaultVal||'';
+  document.getElementById('modal-wrap').classList.add('show');
+  setTimeout(()=>{ inp.focus(); inp.select(); },80);
+}
+function closeModal() { document.getElementById('modal-wrap').classList.remove('show'); _modalCallback=null; }
+function confirmModal() { const v=document.getElementById('modal-input').value.trim(); if(v&&_modalCallback) _modalCallback(v); closeModal(); }
+document.getElementById('modal-input').addEventListener('keydown', e=>{ if(e.key==='Enter') confirmModal(); if(e.key==='Escape') closeModal(); });
+
+// ── Panel ──────────────────────────────────
+function openPanel() { refreshPanelList(); document.getElementById('side-panel').classList.add('open'); document.getElementById('panel-overlay').classList.add('show'); }
+function closePanel() { document.getElementById('side-panel').classList.remove('open'); document.getElementById('panel-overlay').classList.remove('show'); }
+
+function refreshPanelList() {
+  const list = loadProjects();
+  const el = document.getElementById('panel-list');
+  if(!list.length){ el.innerHTML=`<div class="empty-state" style="color:rgba(255,255,255,0.3)"><div style="font-size:32px;margin-bottom:8px">📋</div><div style="font-size:13px">No saved estimates</div></div>`; return; }
+  el.innerHTML = list.map(p=>{
+    const active = p.id===state.currentProjectId;
+    const date = p.savedAt ? new Date(p.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    return `<div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(255,255,255,0.06);${active?'background:rgba(59,130,246,0.15)':''}">
+      <button onclick="switchProject('${p.id}')" style="flex:1;text-align:left;padding:14px 16px;background:none;border:none;cursor:pointer">
+        <div style="font-size:14px;font-weight:${active?700:500};color:${active?'#93c5fd':'rgba(255,255,255,0.85)'};margin-bottom:2px">${p.name}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.3)">${date}${active?' · Active':''}</div>
+      </button>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:4px;padding-right:8px">
+        <button onclick="renameProject('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:7px;background:rgba(255,255,255,0.06);border:none;border-radius:7px;cursor:pointer;color:rgba(255,255,255,0.4)">${ICONS.pencil}</button>
+        ${!active?`<button onclick="deleteProject('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:7px;background:rgba(239,68,68,0.1);border:none;border-radius:7px;cursor:pointer;color:#f87171">${ICONS.trash}</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Settings ───────────────────────────────
+function openSettings() {
+  document.getElementById('agent-name-input').value = state.agentName||'';
+  const sheet = document.getElementById('settings-sheet');
+  sheet.classList.add('show');
+  document.getElementById('settings-box').style.transform='translateY(0)';
+}
+function closeSettings() {
+  localStorage.setItem(AGENT_KEY, state.agentName||'');
+  const sheet = document.getElementById('settings-sheet');
+  sheet.classList.remove('show');
+  document.getElementById('settings-box').style.transform='translateY(40px)';
+}
+
+// ── CSV Price Upload ───────────────────────
+function parseCsvLine(line) {
+  const result=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
+    else if(c===','&&!inQ){result.push(cur.trim());cur='';}
+    else cur+=c;
+  }
+  result.push(cur.trim()); return result;
+}
+function parseCSV(text) {
+  const lines=text.trim().split(/\r?\n/);
+  const headers=parseCsvLine(lines[0]);
+  return lines.slice(1).filter(l=>l.trim()).map(line=>{
+    const vals=parseCsvLine(line);
+    return Object.fromEntries(headers.map((h,i)=>[h.trim(),vals[i]??'']));
+  });
+}
+function handleCsvUpload(input) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const rows=parseCSV(e.target.result);
+      let updated=0;
+      rows.forEach(row=>{ if(row.id&&row.cost){ state.priceOverrides[row.id]=parseFloat(row.cost); updated++; } });
+      savePriceOverrides();
+      document.getElementById('price-status').textContent=`✓ ${updated} prices updated from ${file.name}`;
+      document.getElementById('price-status').style.color='var(--green)';
+      document.getElementById('reset-prices-btn').style.display='block';
+      showToast(`${updated} prices updated`);
+      render();
+    } catch { showToast('CSV parse error — check format'); }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+function resetPrices() {
+  state.priceOverrides={};
+  savePriceOverrides();
+  document.getElementById('price-status').textContent='Using default prices from Pricing_List.csv';
+  document.getElementById('price-status').style.color='';
+  document.getElementById('reset-prices-btn').style.display='none';
+  showToast('Prices reset to defaults');
+  render();
+}
+
+// ── Inline Cost Edit ───────────────────────
+let _editingCostId = null;
+function openCostEdit(itemId) {
+  const def = findItemDef(itemId); if(!def) return;
+  _editingCostId = itemId;
+  document.getElementById('cost-edit-title').textContent = def.name;
+  document.getElementById('cost-edit-unit').textContent = `per ${def.unit}`;
+  document.getElementById('cost-edit-input').value = getItemCost(def).toFixed(2);
+  const sheet = document.getElementById('cost-edit-sheet');
+  sheet.style.opacity='1'; sheet.style.pointerEvents='auto';
+  document.getElementById('cost-edit-box').style.transform='translateY(0)';
+  const hasOverride = state.priceOverrides[def.id]!==undefined;
+  document.getElementById('cost-reset-btn').style.display = hasOverride?'block':'none';
+  setTimeout(()=>{ const inp=document.getElementById('cost-edit-input'); inp.focus(); inp.select(); },80);
+}
+function closeCostEdit() {
+  const sheet=document.getElementById('cost-edit-sheet');
+  sheet.style.opacity='0'; sheet.style.pointerEvents='none';
+  document.getElementById('cost-edit-box').style.transform='translateY(40px)';
+  _editingCostId=null;
+}
+function saveCostEdit() {
+  if(!_editingCostId) return;
+  const val=parseFloat(document.getElementById('cost-edit-input').value);
+  if(isNaN(val)||val<0){ showToast('Enter a valid price'); return; }
+  const def=findItemDef(_editingCostId); if(!def) return;
+  state.priceOverrides[def.id]=val;
+  savePriceOverrides();
+  closeCostEdit();
+  scheduleSave();
+  renderActiveItems();
+  updateHeaderTotal();
+  showToast('Price updated');
+}
+function resetItemCost() {
+  if(!_editingCostId) return;
+  const def=findItemDef(_editingCostId); if(!def) return;
+  delete state.priceOverrides[def.id];
+  savePriceOverrides();
+  closeCostEdit();
+  scheduleSave();
+  renderActiveItems();
+  updateHeaderTotal();
+  showToast('Price reset');
+}
+
+// ── Photo Capture ──────────────────────────
+let _photoTargetId = null;
+function triggerPhoto(itemId) {
+  _photoTargetId = itemId;
+  const inp = document.getElementById('photo-input');
+  inp.value='';
+  // Android fix: must append to body before click
+  document.body.appendChild(inp);
+  inp.click();
+}
+function handlePhotoCapture(input) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1600;
+      const canvas=document.createElement('canvas');
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const dataUrl=canvas.toDataURL('image/jpeg',0.82);
+      if(!state.photos[_photoTargetId]) state.photos[_photoTargetId]=[];
+      state.photos[_photoTargetId].push({dataUrl, name:file.name, ts:Date.now()});
+      scheduleSave();
+      renderActiveItems();
+      showToast('Photo added');
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto(itemId, idx) {
+  if(!state.photos[itemId]) return;
+  state.photos[itemId].splice(idx,1);
+  if(!state.photos[itemId].length) delete state.photos[itemId];
+  scheduleSave();
+  renderActiveItems();
+}
+
+// ── Swipe gesture engine ───────────────────
+function initSwipe(el, stateId, onCheck, onClear) {
+  let startX=0, startY=0, curX=0, moved=false, locked=false;
+  const THRESHOLD = 72;
+  const card = el.querySelector('.item-card');
+  if(!card) return;
+
+  function onStart(x,y){ startX=x; startY=y; curX=0; moved=false; locked=false; }
+  function onMove(x,y){
+    const dx=x-startX, dy=y-startY;
+    if(!moved && Math.abs(dy)>Math.abs(dx)+5){ locked=true; } // vertical scroll takes priority
+    if(locked) return;
+    moved=true;
+    curX=dx;
+    const clamped=Math.max(-THRESHOLD*1.4,Math.min(THRESHOLD*1.4,dx));
+    card.style.transform=`translateX(${clamped}px)`;
+    card.style.transition='none';
+  }
+  function onEnd(){
+    card.style.transition='';
+    card.style.transform='';
+    if(locked||!moved) return;
+    if(curX>THRESHOLD){ onCheck(); }
+    else if(curX<-THRESHOLD){ onClear(); }
+  }
+
+  el.addEventListener('touchstart',e=>{ const t=e.touches[0]; onStart(t.clientX,t.clientY); },{passive:true});
+  el.addEventListener('touchmove', e=>{ const t=e.touches[0]; onMove(t.clientX,t.clientY); },{passive:true});
+  el.addEventListener('touchend', onEnd,{passive:true});
+}
+
+// ── Item toggle ────────────────────────────
+function toggleItem(id) {
+  if(!state.items[id]) state.items[id]={_id:id,checked:false,qty:'',year:''};
+  state.items[id].checked = !state.items[id].checked;
+  if(!state.items[id].checked){ state.items[id].qty=''; }
+  scheduleSave();
+  refreshItemCard(id);
+  updateHeaderTotal();
+  updateProgress();
+}
+function clearItem(id) {
+  if(!state.items[id]) return;
+  state.items[id].checked=false;
+  state.items[id].qty='';
+  scheduleSave();
+  refreshItemCard(id);
+  updateHeaderTotal();
+  updateProgress();
+}
+function updateQty(id, val) {
+  if(!state.items[id]) return;
+  state.items[id].qty=val;
+  scheduleSave();
+  refreshItemTotal(id);
+  updateHeaderTotal();
+}
+function updateYear(id, val) {
+  if(!state.items[id]) return;
+  state.items[id].year=val;
+  scheduleSave();
+}
+
+// ── Format helpers ─────────────────────────
+function fmt$(n){ return '$'+Math.round(n).toLocaleString('en-US'); }
+function fmtDate(iso){ if(!iso)return ''; try{ return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch{return '';} }
+
+// ── Header rendering & shrink ──────────────
+let _lastTotal = 0;
+function renderHeader() {
+  const el = document.getElementById('header-root');
+  if(!el) return;
+  const total = calcRunningTotal();
+  const prog = calcProgress();
+  const pct = prog.total ? Math.round(prog.checked/prog.total*100) : 0;
+  const C = 2*Math.PI*18; // circumference for r=18
+  const offset = C - (pct/100)*C;
+  el.innerHTML = `
+    <div id="app-header" class="pt-safe">
+      <div style="padding:10px 16px 0;display:flex;justify-content:space-between;align-items:center">
+        <button onclick="openPanel()" style="padding:7px;background:rgba(255,255,255,0.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,0.7)">${ICONS.menu}</button>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="color:#3b82f6">${ICONS.spark}</span>
+          <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:rgba(255,255,255,0.6);text-transform:uppercase">Spark Estimator</span>
+        </div>
+        <div style="display:flex;gap:2px">
+          <button onclick="openSettings()" style="padding:7px;background:rgba(255,255,255,0.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,0.7)">${ICONS.settings}</button>
+          <button onclick="exportPackage()" style="padding:7px;background:rgba(255,255,255,0.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,0.7)">${ICONS.export}</button>
+        </div>
+      </div>
+
+      <!-- Expanded header -->
+      <div id="header-expanded" style="padding:12px 16px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:2px">Running Total</div>
+            <div id="total-display-main" class="total-display" style="font-size:38px;color:white;line-height:1">${fmt$(total)}</div>
+            <button onclick="openModal('Rename Estimate','e.g. 123 Main St','${state.currentProjectName}',(n)=>{state.currentProjectName=n;renderHeader();scheduleSave();})" style="display:flex;align-items:center;gap:5px;margin-top:5px;background:none;border:none;cursor:pointer;padding:0">
+              <span style="font-size:12px;color:rgba(255,255,255,0.4);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${state.currentProjectName}</span>
+              <span style="color:rgba(255,255,255,0.25)">${ICONS.pencil}</span>
+            </button>
+          </div>
+          <!-- Progress ring -->
+          <div style="position:relative;flex-shrink:0;width:52px;height:52px;display:flex;align-items:center;justify-content:center">
+            <svg width="52" height="52" class="progress-ring">
+              <circle cx="26" cy="26" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+              <circle class="progress-ring-fill" cx="26" cy="26" r="18" fill="none"
+                stroke="${pct===100?'#10b981':'#3b82f6'}" stroke-width="4"
+                stroke-dasharray="${C}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div style="position:absolute;font-size:11px;font-weight:800;color:${pct===100?'#10b981':'rgba(255,255,255,0.7)'}">${pct}%</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,0.25)">${prog.checked} of ${prog.total} groups reviewed</div>
+      </div>
+
+      <!-- Compact header (shown when scrolled) -->
+      <div id="header-compact" style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px 12px;gap:12px">
+        <div id="total-display-compact" class="total-display" style="font-size:22px;font-weight:700;color:white">${fmt$(total)}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.35);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${state.currentProjectName}</div>
+      </div>
+
+      <!-- Section tabs -->
+      <div class="scroll-x" style="background:rgba(255,255,255,0.04);border-top:1px solid rgba(255,255,255,0.06);display:flex" id="section-tabs">
+        ${CATEGORIES.map((cat,i)=>{
+          const tot=calcCategoryTotal(cat);
+          const active=i===state.currentCat;
+          return `<button class="section-tab${active?' active':''}" onclick="switchCat(${i})">
+            ${cat.name}${tot>0?`<span class="tab-badge">${fmt$(tot).replace('$','')}</span>`:''}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  // Scroll shrink observer
+  const scrollArea = document.getElementById('scroll-area');
+  if(scrollArea) {
+    scrollArea.onscroll = ()=>{
+      const h = document.getElementById('app-header');
+      if(!h) return;
+      if(scrollArea.scrollTop>60) h.classList.add('shrunk');
+      else h.classList.remove('shrunk');
+    };
+  }
+  _lastTotal = total;
+}
+
+function updateHeaderTotal() {
+  const total = calcRunningTotal();
+  const m = document.getElementById('total-display-main');
+  const c = document.getElementById('total-display-compact');
+  if(m){ m.textContent=fmt$(total); m.classList.add('bump'); setTimeout(()=>m.classList.remove('bump'),400); }
+  if(c){ c.textContent=fmt$(total); }
+  // Update tab badges
+  const tabs = document.querySelectorAll('.section-tab');
+  CATEGORIES.forEach((cat,i)=>{
+    const tab=tabs[i]; if(!tab) return;
+    const tot=calcCategoryTotal(cat);
+    const badge=tab.querySelector('.tab-badge');
+    if(tot>0){
+      if(badge) badge.textContent=fmt$(tot).replace('$','');
+      else tab.innerHTML=`${cat.name}<span class="tab-badge">${fmt$(tot).replace('$','')}</span>`;
+    } else {
+      if(badge) badge.remove();
+    }
+  });
+  _lastTotal = total;
+}
+
+function updateProgress() {
+  const prog = calcProgress();
+  const pct = prog.total ? Math.round(prog.checked/prog.total*100) : 0;
+  const C = 2*Math.PI*18;
+  const offset = C - (pct/100)*C;
+  const ring = document.querySelector('.progress-ring-fill');
+  const label = document.querySelector('.progress-ring ~ div');
+  if(ring){ ring.style.strokeDashoffset=offset; ring.setAttribute('stroke',pct===100?'#10b981':'#3b82f6'); }
+  const progLabel = document.querySelector('#header-expanded div:last-child');
+  if(progLabel) progLabel.textContent=`${prog.checked} of ${prog.total} groups reviewed`;
+}
+
+// ── Category switching ─────────────────────
+function switchCat(i) {
+  state.currentCat = i;
+  // Update active tab
+  document.querySelectorAll('.section-tab').forEach((t,idx)=>{ t.classList.toggle('active',idx===i); });
+  renderActiveItems();
+  const scrollArea = document.getElementById('scroll-area');
+  if(scrollArea) scrollArea.scrollTop=0;
+}
+
+// ── Group toggle ───────────────────────────
+function toggleGroup(gid) {
+  if(state.expandedGroups.has(gid)) state.expandedGroups.delete(gid);
+  else state.expandedGroups.add(gid);
+  // Toggle classes without full re-render
+  const card = document.querySelector(`[data-gid="${gid}"]`);
+  if(card){ card.classList.toggle('open', state.expandedGroups.has(gid)); }
+}
+
+// ── Render helpers ─────────────────────────
+function refreshItemCard(id) {
+  const card = document.querySelector(`[data-item-id="${id}"]`);
+  if(!card) return;
+  const s = state.items[id];
+  const def = findItemDef(id);
+  if(!def||!s) return;
+  card.classList.toggle('is-checked', !!s.checked);
+  const totalEl = card.querySelector('.line-total');
+  if(totalEl){ const q=parseFloat(s.qty)||0; const c=getItemCost(def); const raw=q*c; const t=def.min?Math.max(raw,def.min):raw; totalEl.textContent=t>0?fmt$(t):'—'; totalEl.classList.toggle('zero',t<=0); }
+}
+function refreshItemTotal(id) {
+  const card = document.querySelector(`[data-item-id="${id}"]`);
+  if(!card) return;
+  const s = state.items[id];
+  const def = findItemDef(id);
+  if(!def||!s) return;
+  const q=parseFloat(s.qty)||0;
+  const c=getItemCost(def);
+  const raw=q*c;
+  const t=def.min?Math.max(raw,def.min):raw;
+  const totalEl=card.querySelector('.line-total');
+  if(totalEl){ totalEl.textContent=t>0?fmt$(t):'—'; totalEl.classList.toggle('zero',t<=0); }
+}
+
+// ── Stubs for phases 2-7 ──────────────────
+function renderActiveItems() { const el=document.getElementById('items-area'); if(el) el.innerHTML=`<div class="empty-state"><div style="font-size:48px;margin-bottom:12px">🏗️</div><div style="font-size:16px;font-weight:600;color:var(--text-2);margin-bottom:6px">Phase 2 Coming Next</div><div style="font-size:13px">All 75 repair items + 19 groups will appear here</div></div>`; }
+function exportPackage() { showToast('Export ready in Phase 5'); }
+
+// ── Toast ──────────────────────────────────
+let _toastTimer;
+function showToast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ── Main render ────────────────────────────
+function render() {
+  document.getElementById('app').innerHTML = `
+    <div style="min-height:100vh;display:flex;flex-direction:column">
+      <div id="header-root"></div>
+
+      <!-- Spacer to push content below fixed header -->
+      <div id="header-spacer" style="height:200px;flex-shrink:0"></div>
+
+      <!-- Content area -->
+      <div id="scroll-area" class="scroll-y" style="flex:1;padding-bottom:100px">
+        <div id="items-area" style="padding:12px 14px 0"></div>
+      </div>
+
+      <!-- Bottom nav -->
+      <div id="bottom-nav">
+        <div style="display:flex;gap:10px;max-width:480px;margin:0 auto">
+          <button id="btn-prev" onclick="switchCat(Math.max(0,state.currentCat-1))" style="flex:1;padding:13px;border-radius:12px;border:2px solid var(--accent);background:white;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s">← Prev</button>
+          <button id="btn-next" onclick="handleNextBtn()" style="flex:1;padding:13px;border-radius:12px;border:none;background:var(--accent);color:white;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s">Next →</button>
+        </div>
+      </div>
+    </div>
+  `;
+  renderHeader();
+  renderActiveItems();
+  updateBottomNav();
+
+  // Set header spacer height dynamically
+  setTimeout(()=>{
+    const h=document.getElementById('app-header');
+    const spacer=document.getElementById('header-spacer');
+    if(h&&spacer) spacer.style.height=h.offsetHeight+'px';
+  },50);
+}
+
+function handleNextBtn() {
+  if(state.currentCat < CATEGORIES.length-1) switchCat(state.currentCat+1);
+  else { state.view='summary'; renderSummaryView(); }
+}
+
+function updateBottomNav() {
+  const prev=document.getElementById('btn-prev');
+  const next=document.getElementById('btn-next');
+  if(!prev||!next) return;
+  if(state.currentCat===0){ prev.style.opacity='0.3'; prev.style.pointerEvents='none'; } else { prev.style.opacity='1'; prev.style.pointerEvents='auto'; }
+  if(state.currentCat>=CATEGORIES.length-1){ next.textContent='View Summary →'; next.style.background='#059669'; }
+  else { next.textContent='Next →'; next.style.background='var(--accent)'; }
+}
+
+function renderSummaryView() {
+  document.getElementById('app').innerHTML=`
+    <div style="min-height:100vh;background:var(--surface-2)">
+      <div style="background:var(--blue-900);padding:max(40px,env(safe-area-inset-top)) 16px 24px" class="pt-safe">
+        <button onclick="state.view='main';render();" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;padding:0">
+          ${ICONS.back} Back to Estimate
+        </button>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:4px">Total Estimate</div>
+        <div class="total-display" style="font-size:44px;color:white">${fmt$(calcRunningTotal())}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.35);margin-top:6px">${state.currentProjectName}</div>
+      </div>
+      <div style="padding:14px">
+        <div style="background:white;border-radius:16px;padding:18px;border:1px solid var(--border);box-shadow:var(--shadow-card);margin-bottom:10px;text-align:center">
+          <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Phase 6</div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-2)">Deal Analyzer will appear here</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:4px">ARV · Max Offer · Profit Score</div>
+        </div>
+        <button onclick="exportPackage()" class="btn-primary" style="margin-bottom:10px">
+          ${ICONS.export} Export ZIP (Excel + Photos)
+        </button>
+        <button onclick="state.view='main';render();" class="btn-secondary">← Back to Estimate</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── Bootstrap ──────────────────────────────
+(function init() {
+  state.priceOverrides = loadPriceOverrides();
+  state.agentName = localStorage.getItem(AGENT_KEY)||'';
+
+  const projects = loadProjects();
+  if(projects.length) {
+    loadProjectIntoState(projects[0]);
+  } else {
+    state.currentProjectId = 'p_' + Date.now();
+    state.currentProjectName = 'New Estimate';
+    initBlankState();
+    saveCurrentState();
+  }
+
+  render();
+
+  // Auto-save on tab switch / close
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') saveCurrentState(); });
+  window.addEventListener('pagehide', saveCurrentState);
+
+  // PWA: inline manifest + service worker
+  const manifest = {
+    name: 'Spark Estimator',
+    short_name: 'Estimator',
+    description: 'Field repair cost estimator for Spark Homes acquisition team',
+    start_url: './',
+    display: 'standalone',
+    background_color: '#0f172a',
+    theme_color: '#0f172a',
+    orientation: 'portrait-primary',
+    icons: [
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230f172a'/%3E%3Cpath d='M108 24L48 112h60l-8 56 76-80h-64l-4-64z' fill='%233b82f6'/%3E%3C/svg%3E", sizes: '192x192', type: 'image/svg+xml' },
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Cpath d='M284 64L128 296h160l-20 152 204-212h-172l-16-172z' fill='%233b82f6'/%3E%3C/svg%3E", sizes: '512x512', type: 'image/svg+xml' }
+    ]
+  };
+  const mBlob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const mUrl = URL.createObjectURL(mBlob);
+  const mLink = document.createElement('link');
+  mLink.rel='manifest'; mLink.href=mUrl;
+  document.head.appendChild(mLink);
+
+  // Inline Service Worker
+  const swCode = `
+    const CACHE='spark-v3';
+    const ASSETS=['/'];
+    self.addEventListener('install',e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
+    self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
+    self.addEventListener('fetch',e=>{ if(e.request.method!=='GET')return; e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{ if(res&&res.status===200){ const clone=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,clone)); } return res; }))); });
+  `;
+  const swBlob = new Blob([swCode],{type:'application/javascript'});
+  const swUrl = URL.createObjectURL(swBlob);
+  if('serviceWorker' in navigator) navigator.serviceWorker.register(swUrl,{scope:'./'}).catch(()=>{});
+})();
+</script>
+</body>
+</html>
