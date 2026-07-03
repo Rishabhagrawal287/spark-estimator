@@ -8,1567 +8,874 @@
   <meta name="apple-mobile-web-app-title" content="Spark Estimator"/>
   <meta name="theme-color" content="#0f172a"/>
   <title>Spark Estimator</title>
-
-  <!-- CDNs -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
   <style>
-    /* ── Fonts ── */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
-
-    /* ── Reset & Base ── */
-    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; margin: 0; overscroll-behavior: none; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f0f4f8;
-      color: #0f172a;
-    }
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-    input[type=number] { -moz-appearance: textfield; }
-
-    /* ── Safe areas ── */
-    .pt-safe { padding-top: max(16px, env(safe-area-inset-top)); }
-    .pb-safe { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-    .mb-safe { margin-bottom: max(16px, env(safe-area-inset-bottom)); }
-
-    /* ── Scrollbars hidden ── */
-    .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .scroll-x::-webkit-scrollbar { display: none; }
-    .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-
-    /* ── Design tokens ── */
-    :root {
-      --blue-900: #0f172a;
-      --blue-800: #1e293b;
-      --blue-700: #334155;
-      --blue-600: #475569;
-      --blue-400: #60a5fa;
-      --blue-300: #93c5fd;
-      --blue-100: #dbeafe;
-      --blue-50:  #eff6ff;
-      --accent:   #1d4ed8;
-      --accent-light: #3b82f6;
-      --surface:  #ffffff;
-      --surface-2:#f8fafc;
-      --border:   #e2e8f0;
-      --border-strong: #cbd5e1;
-      --text-1:   #0f172a;
-      --text-2:   #475569;
-      --text-3:   #94a3b8;
-      --green:    #10b981;
-      --yellow:   #f59e0b;
-      --red:      #ef4444;
-      --radius-card: 16px;
-      --radius-sm: 8px;
-      --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
-      --shadow-float: 0 8px 32px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    /* ── App shell (full width, as originally designed) ── */
-    .app-shell {
-      position: relative;
-      min-height: 100vh;
-      background: var(--surface-2);
-    }
-
-    /* ── Bloomberg-style header ── */
-    #app-header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      background: linear-gradient(165deg, #16213e 0%, var(--blue-900) 55%, #0a1224 100%);
-      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-      will-change: transform;
-    }
-    #app-header.shrunk {
-      box-shadow: var(--shadow-float);
-    }
-    #app-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.4), transparent);
-    }
-    #app-header.shrunk #header-expanded { max-height: 0; opacity: 0; overflow: hidden; }
-    #app-header.shrunk #header-compact { opacity: 1; pointer-events: auto; }
-    #header-expanded {
-      max-height: 200px;
-      overflow: hidden;
-      transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
-    }
-    #header-compact {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-    }
-
-    /* ── Animated total counter ── */
-    .total-display {
-      font-family: 'DM Mono', monospace;
-      font-weight: 500;
-      letter-spacing: -0.02em;
-      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .total-display.bump {
-      transform: scale(1.06);
-      color: #93c5fd;
-    }
-
-    /* ── Progress ring ── */
-    .progress-ring { transform: rotate(-90deg); }
-    .progress-ring-fill {
-      transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);
-      stroke-linecap: round;
-    }
-
-    /* ── Section tabs ── */
-    .section-tab {
-      position: relative;
-      flex-shrink: 0;
-      padding: 10px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-      color: var(--text-3);
-      border-bottom: 2px solid transparent;
-      transition: color 0.2s, border-color 0.2s;
-      white-space: nowrap;
-      background: none;
-      border-top: none; border-left: none; border-right: none;
-      cursor: pointer;
-    }
-    .section-tab.active {
-      color: var(--accent-light);
-      border-bottom-color: var(--accent-light);
-    }
-    .section-tab .tab-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
-      margin-left: 6px;
-      border-radius: 9px;
-      font-size: 10px;
-      font-weight: 700;
-      background: var(--accent);
-      color: white;
-    }
-
-    /* ── Group cards ── */
-    .group-card {
-      background: var(--surface);
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-card);
-      overflow: hidden;
-      margin-bottom: 10px;
-      border: 1px solid var(--border);
-      transition: box-shadow 0.2s, border-color 0.2s;
-    }
-    .group-card.has-checked {
-      border-color: var(--blue-300);
-      box-shadow: 0 0 0 1px var(--blue-300), var(--shadow-card);
-    }
-    .group-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      background: none;
-      border: none;
-      width: 100%;
-      text-align: left;
-      gap: 10px;
-    }
-    .group-chevron {
-      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-      color: var(--text-3);
-      flex-shrink: 0;
-    }
-    .group-card.open .group-chevron { transform: rotate(180deg); }
-    .group-body {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
-    }
-    .group-card.open .group-body { max-height: 2000px; }
-    .group-items { padding: 0 10px 10px; }
-
-    /* ── Swipeable item cards ── */
-    .item-wrap {
-      position: relative;
-      margin-bottom: 6px;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .item-bg-check {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%);
-      display: flex;
-      align-items: center;
-      padding-left: 20px;
-      border-radius: 12px;
-    }
-    .item-bg-clear {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(270deg, #ef4444 0%, #f87171 100%);
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      padding-right: 20px;
-      border-radius: 12px;
-    }
-    .item-card {
-      position: relative;
-      background: var(--surface-2);
-      border-radius: 12px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      cursor: pointer;
-      transition: transform 0.08s ease, background 0.2s;
-      will-change: transform;
-      touch-action: pan-y;
-      z-index: 1;
-    }
-    .item-card.is-checked {
-      background: #eff6ff;
-      border-color: var(--blue-300);
-    }
-    .item-card.no-action {
-      background: #f8fafc;
-    }
-    .item-card.no-action.is-checked {
-      background: #f0fdf4;
-      border-color: #86efac;
-    }
-
-    /* ── Inline qty row ── */
-    .qty-row {
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
-    }
-    .item-card.is-checked .qty-row {
-      max-height: 120px;
-      opacity: 1;
-    }
-    .qty-input {
-      width: 80px;
-      padding: 6px 10px;
-      font-size: 16px; /* prevents iOS zoom */
-      font-family: 'DM Mono', monospace;
-      font-weight: 500;
-      border: 1.5px solid var(--border-strong);
-      border-radius: 8px;
-      background: white;
-      color: var(--text-1);
-      text-align: right;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .qty-input:focus {
-      border-color: var(--accent-light);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
-    }
-
-    /* ── Cost chip (tappable to edit) ── */
-    .cost-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: var(--blue-50);
-      border: 1px solid var(--blue-100);
-      font-size: 11px;
-      font-family: 'DM Mono', monospace;
-      color: var(--accent);
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .cost-chip:active { background: var(--blue-100); }
-
-    /* ── Line total ── */
-    .line-total {
-      font-family: 'DM Mono', monospace;
-      font-weight: 500;
-      font-size: 15px;
-      color: var(--accent);
-      min-width: 60px;
-      text-align: right;
-    }
-    .line-total.zero { color: var(--text-3); }
-
-    /* ── Bottom nav ── */
-    #bottom-nav {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 10px 16px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      z-index: 100;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
-    }
-
-    /* ── Side panel ── */
-    /* ── Designer floating sidebar ── */
-    @keyframes floatPanelIn {
-      0%   { opacity:0; transform: scale(0.72) translateY(-12px); clip-path: inset(0 100% 100% 0 round 16px); }
-      60%  { opacity:1; transform: scale(1.02) translateY(2px);  clip-path: inset(0 0% 0% 0 round 16px); }
-      100% { opacity:1; transform: scale(1)    translateY(0);    clip-path: inset(0 0% 0% 0 round 16px); }
-    }
-    @keyframes floatPanelOut {
-      0%   { opacity:1; transform: scale(1)    translateY(0);    clip-path: inset(0 0% 0% 0 round 16px); }
-      100% { opacity:0; transform: scale(0.78) translateY(-10px); clip-path: inset(0 90% 90% 0 round 20px); }
-    }
-    @keyframes itemStagger {
-      from { opacity:0; transform: translateX(-10px); }
-      to   { opacity:1; transform: translateX(0); }
-    }
-
-    /* No full-screen overlay — subtle backdrop only behind the panel */
-    #panel-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 299;
-      opacity: 0;
-      pointer-events: none;
-      background: rgba(0,0,0,0);
-      transition: background 0.3s ease;
-    }
-    #panel-overlay.show {
-      opacity: 1;
-      pointer-events: auto;
-      background: rgba(0,0,0,0.18);
-    }
-    #panel-overlay.hiding {
-      pointer-events: none;
-      background: rgba(0,0,0,0);
-    }
-
-    /* The panel itself — floats detached from all edges */
-    #side-panel {
-      position: fixed;
-      top: 56px;   /* sits just below the menu button */
-      left: 12px;
-      width: 290px;
-      max-height: calc(100vh - 80px);
-      background: #0f172a;
-      border: 1px solid rgba(59,130,246,0.25);
-      border-radius: 18px;
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      box-shadow:
-        0 0 0 1px rgba(59,130,246,0.1),
-        0 8px 32px rgba(0,0,0,0.55),
-        0 2px 8px rgba(0,0,0,0.4),
-        inset 0 1px 0 rgba(255,255,255,0.06);
-      transform-origin: top left;
-      /* Hidden by default */
-      opacity: 0;
-      pointer-events: none;
-      transform: scale(0.8) translateY(-8px);
-      clip-path: inset(0 100% 100% 0 round 18px);
-    }
-    #side-panel.open {
-      pointer-events: auto;
-      animation: floatPanelIn 0.55s cubic-bezier(0.34,1.3,0.64,1) forwards;
-    }
-    #side-panel.closing {
-      animation: floatPanelOut 0.32s cubic-bezier(0.4,0,0.8,0.5) forwards;
-    }
-    /* Accent top-border line connecting visually to button */
-    #side-panel::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 16px; right: 16px;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #3b82f6, #60a5fa, transparent);
-      border-radius: 1px;
-      z-index: 2;
-    }
-    /* Stagger each list item inside */
-    #panel-list > div {
-      animation: none;
-    }
-    #side-panel.open #panel-list > div:nth-child(1) { animation: itemStagger 0.28s ease 0.18s both; }
-    #side-panel.open #panel-list > div:nth-child(2) { animation: itemStagger 0.28s ease 0.24s both; }
-    #side-panel.open #panel-list > div:nth-child(3) { animation: itemStagger 0.28s ease 0.30s both; }
-    #side-panel.open #panel-list > div:nth-child(4) { animation: itemStagger 0.28s ease 0.36s both; }
-    #side-panel.open #panel-list > div:nth-child(5) { animation: itemStagger 0.28s ease 0.42s both; }
-    #side-panel.open #panel-list > div:nth-child(n+6) { animation: itemStagger 0.28s ease 0.46s both; }
-
-    /* ── Modal ── */
-    #modal-wrap {
-      position: fixed;
-      inset: 0;
-      z-index: 400;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-    #modal-wrap.show { opacity: 1; pointer-events: auto; }
-    #modal-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
-    #modal-box {
-      position: relative;
-      background: white;
-      border-radius: 20px;
-      padding: 24px;
-      width: 100%;
-      max-width: 360px;
-      box-shadow: var(--shadow-float);
-      transform: scale(0.95) translateY(8px);
-      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    #modal-wrap.show #modal-box { transform: scale(1) translateY(0); }
-
-    /* ── Settings sheet ── */
-    #settings-sheet {
-      position: fixed;
-      inset: 0;
-      z-index: 400;
-      display: flex;
-      align-items: flex-end;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s;
-    }
-    #settings-sheet.show { opacity: 1; pointer-events: auto; }
-    #settings-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
-    #settings-box {
-      position: relative;
-      width: 100%;
-      background: white;
-      border-radius: 24px 24px 0 0;
-      padding: 24px 20px;
-      padding-bottom: max(24px, env(safe-area-inset-bottom));
-      box-shadow: var(--shadow-float);
-      transform: translateY(40px);
-      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-      max-height: 75vh;
-      overflow-y: auto;
-    }
-    #settings-sheet.show #settings-box { transform: translateY(0); }
-
-    /* ── Deal analyzer ── */
-    .deal-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-    .deal-badge.green  { background: #d1fae5; color: #065f46; }
-    .deal-badge.yellow { background: #fef3c7; color: #92400e; }
-    .deal-badge.red    { background: #fee2e2; color: #991b1b; }
-
-    /* ── Toast ── */
-    #toast {
-      position: fixed;
-      bottom: 90px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--blue-800);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 50px;
-      font-size: 13px;
-      font-weight: 600;
-      z-index: 500;
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    #toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    /* ── Sub-tabs (rooms) ── */
-    .room-tab-bar {
-      display: flex;
-      overflow-x: auto;
-      scrollbar-width: none;
-      background: var(--surface-2);
-      border-bottom: 1px solid var(--border);
-      padding: 0 4px;
-    }
-    .room-tab-bar::-webkit-scrollbar { display: none; }
-    .room-tab {
-      flex-shrink: 0;
-      padding: 8px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-3);
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: color 0.15s, border-color 0.15s;
-      background: none;
-      border-top: none; border-left: none; border-right: none;
-    }
-    .room-tab.active { color: var(--accent-light); border-bottom-color: var(--accent-light); }
-    .room-tab-add {
-      flex-shrink: 0;
-      padding: 8px 12px;
-      font-size: 18px;
-      color: var(--accent-light);
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
-
-    /* ── Photo grid ── */
-    .photo-thumb {
-      position: relative;
-      width: 72px;
-      height: 72px;
-      border-radius: 10px;
-      overflow: hidden;
-      flex-shrink: 0;
-      border: 1.5px solid var(--border);
-    }
-    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .photo-remove {
-      position: absolute;
-      top: -4px; right: -4px;
-      width: 20px; height: 20px;
-      background: #ef4444;
-      color: white;
-      border-radius: 50%;
-      font-size: 11px;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      border: 2px solid white;
-      cursor: pointer;
-    }
-    .photo-add-btn {
-      width: 72px; height: 72px;
-      border-radius: 10px;
-      border: 1.5px dashed var(--border-strong);
-      background: var(--surface-2);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 3px;
-      font-size: 10px;
-      font-weight: 600;
-      color: var(--text-3);
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: border-color 0.2s, color 0.2s;
-    }
-    .photo-add-btn:active { border-color: var(--accent-light); color: var(--accent-light); }
-
-    /* ── Summary screen ── */
-    .summary-section {
-      background: white;
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-card);
-      overflow: hidden;
-      margin-bottom: 10px;
-      border: 1px solid var(--border);
-    }
-    .summary-section-header {
-      padding: 12px 16px;
-      background: var(--blue-900);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    /* ── Misc utilities ── */
-    .btn-primary {
-      display: flex; align-items: center; justify-content: center;
-      gap: 6px;
-      background: var(--accent);
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      padding: 13px 20px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.15s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-primary:active { background: #1e40af; transform: scale(0.98); }
-    .btn-secondary {
-      display: flex; align-items: center; justify-content: center;
-      gap: 6px;
-      background: white;
-      color: var(--accent);
-      font-size: 14px;
-      font-weight: 700;
-      padding: 13px 20px;
-      border-radius: 12px;
-      border: 2px solid var(--accent);
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.15s, transform 0.1s;
-    }
-    .btn-secondary:active { background: var(--blue-50); transform: scale(0.98); }
-    .btn-ghost {
-      background: none; border: none; cursor: pointer; padding: 8px;
-      color: var(--text-3); border-radius: 8px;
-      transition: background 0.15s, color 0.15s;
-    }
-    .btn-ghost:active { background: rgba(255,255,255,0.1); color: white; }
-
-    /* Divider pill */
-    .sheet-pill {
-      width: 36px; height: 4px;
-      background: var(--border-strong);
-      border-radius: 2px;
-      margin: 0 auto 16px;
-    }
-
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      padding: 48px 24px;
-      color: var(--text-3);
-    }
-
-    /* ── Year input tag ── */
-    .year-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: #fef3c7;
-      border: 1px solid #fde68a;
-      font-size: 11px;
-      font-weight: 600;
-      color: #92400e;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition: none !important; animation: none !important; }
-    }
+    *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;margin:0;overscroll-behavior:none}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#e8edf3;color:#0f172a}
+    input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+    input[type=number]{-moz-appearance:textfield}
+    .pt-safe{padding-top:max(16px,env(safe-area-inset-top))}
+    .pb-safe{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+    .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .scroll-x::-webkit-scrollbar{display:none}
+    .scroll-y{overflow-y:auto;-webkit-overflow-scrolling:touch}
+    :root{
+      --navy:#0f172a;--navy2:#1e293b;--navy3:#334155;
+      --accent:#1d4ed8;--accent2:#3b82f6;--accent3:#93c5fd;
+      --surface:#ffffff;--surface2:#f8fafc;
+      --border:#e2e8f0;--border2:#cbd5e1;
+      --t1:#0f172a;--t2:#475569;--t3:#94a3b8;
+      --green:#10b981;--yellow:#f59e0b;--red:#ef4444;
+      --r:16px;--rs:8px;
+      --sh:0 1px 3px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.06);
+      --shf:0 8px 32px rgba(0,0,0,0.16),0 2px 8px rgba(0,0,0,0.08);
+    }
+    .app-shell{max-width:480px;margin:0 auto;min-height:100vh;background:var(--surface2);position:relative}
+    @media(min-width:481px){.app-shell{box-shadow:0 0 60px rgba(15,23,42,0.14),0 0 0 1px var(--border)}}
+    #app-header{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;background:linear-gradient(165deg,#16213e 0%,#0f172a 55%,#0a1224 100%)}
+    #app-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.4),transparent)}
+    #app-header.shrunk{box-shadow:var(--shf)}
+    #app-header.shrunk #hdr-exp{max-height:0;opacity:0;overflow:hidden}
+    #app-header.shrunk #hdr-cmp{opacity:1;pointer-events:auto}
+    #hdr-exp{max-height:200px;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .2s ease}
+    #hdr-cmp{opacity:0;pointer-events:none;transition:opacity .2s ease}
+    .tot-disp{font-family:'DM Mono',monospace;font-weight:500;letter-spacing:-.02em;transition:all .4s cubic-bezier(.34,1.56,.64,1)}
+    .tot-disp.bump{transform:scale(1.06);color:#93c5fd}
+    .prog-ring{transform:rotate(-90deg)}
+    .prog-fill{transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1);stroke-linecap:round}
+    .sec-tab{position:relative;flex-shrink:0;padding:9px 14px;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--t3);border-bottom:2px solid transparent;transition:color .2s,border-color .2s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;cursor:pointer}
+    .sec-tab.active{color:var(--accent2);border-bottom-color:var(--accent2)}
+    .tab-bdg{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:9px;font-size:10px;font-weight:700;background:var(--accent);color:white}
+    .grp-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:10px;border:1px solid var(--border);transition:box-shadow .2s,border-color .2s}
+    .grp-card.done{border-color:var(--accent3);box-shadow:0 0 0 1px var(--accent3),var(--sh)}
+    .grp-card.no-act{border-color:#86efac;box-shadow:0 0 0 1px #86efac,var(--sh)}
+    .grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;cursor:pointer;user-select:none;-webkit-user-select:none;background:none;border:none;width:100%;text-align:left;gap:10px}
+    .grp-chev{transition:transform .25s cubic-bezier(.4,0,.2,1);color:var(--t3);flex-shrink:0}
+    .grp-card.open .grp-chev{transform:rotate(180deg)}
+    .grp-body{max-height:0;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1)}
+    .grp-card.open .grp-body{max-height:4000px}
+    .grp-items{padding:0 10px 10px}
+    .item-wrap{position:relative;margin-bottom:6px;border-radius:12px;overflow:hidden}
+    .item-bg-chk{position:absolute;inset:0;background:linear-gradient(90deg,#1d4ed8,#3b82f6);display:flex;align-items:center;padding-left:18px;border-radius:12px}
+    .item-bg-clr{position:absolute;inset:0;background:linear-gradient(270deg,#ef4444,#f87171);display:flex;align-items:center;justify-content:flex-end;padding-right:18px;border-radius:12px}
+    .item-card{position:relative;background:var(--surface2);border-radius:12px;padding:11px 13px;border:1px solid var(--border);cursor:pointer;transition:background .2s,border-color .2s;touch-action:pan-y;z-index:1}
+    .item-card.chk{background:#eff6ff;border-color:var(--accent3)}
+    .qty-row{max-height:0;overflow:hidden;opacity:0;transition:max-height .28s cubic-bezier(.4,0,.2,1),opacity .2s ease}
+    .item-card.chk .qty-row{max-height:200px;opacity:1}
+    .qty-inp{width:72px;padding:6px 8px;font-size:16px;font-family:'DM Mono',monospace;font-weight:500;border:1.5px solid var(--border2);border-radius:8px;background:white;color:var(--t1);text-align:right;outline:none;transition:border-color .2s,box-shadow .2s}
+    .qty-inp:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+    .cost-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#eff6ff;border:1px solid #dbeafe;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent);cursor:pointer;transition:background .15s}
+    .cost-chip:active{background:#dbeafe}
+    .line-tot{font-family:'DM Mono',monospace;font-weight:600;font-size:14px;color:var(--accent);min-width:58px;text-align:right;flex-shrink:0}
+    .line-tot.zero{color:var(--t3)}
+    .na-btn{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;width:100%;text-align:left;transition:all .2s;margin-bottom:8px}
+    .na-btn.active{border-color:#10b981;background:#f0fdf4}
+    #bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);border-top:1px solid var(--border);padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));z-index:100;box-shadow:0 -4px 24px rgba(0,0,0,.08)}
+    @keyframes fpIn{0%{opacity:0;transform:scale(.72) translateY(-12px);clip-path:inset(0 100% 100% 0 round 16px)}60%{opacity:1;transform:scale(1.02) translateY(2px);clip-path:inset(0 0% 0% 0 round 16px)}100%{opacity:1;transform:scale(1) translateY(0);clip-path:inset(0 0% 0% 0 round 16px)}}
+    @keyframes fpOut{0%{opacity:1;transform:scale(1) translateY(0);clip-path:inset(0 0% 0% 0 round 16px)}100%{opacity:0;transform:scale(.78) translateY(-10px);clip-path:inset(0 90% 90% 0 round 20px)}}
+    @keyframes stagger{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+    #panel-overlay{position:fixed;inset:0;z-index:299;opacity:0;pointer-events:none;background:rgba(0,0,0,0);transition:background .3s ease}
+    #panel-overlay.show{opacity:1;pointer-events:auto;background:rgba(0,0,0,.18)}
+    #panel-overlay.hiding{pointer-events:none;background:rgba(0,0,0,0)}
+    #side-panel{position:fixed;top:56px;left:12px;width:290px;max-height:calc(100vh - 80px);background:#0f172a;border:1px solid rgba(59,130,246,.25);border-radius:18px;z-index:300;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 0 1px rgba(59,130,246,.1),0 8px 32px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);transform-origin:top left;opacity:0;pointer-events:none;transform:scale(.8) translateY(-8px);clip-path:inset(0 100% 100% 0 round 18px)}
+    #side-panel::before{content:'';position:absolute;top:0;left:16px;right:16px;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,#60a5fa,transparent);border-radius:1px;z-index:2}
+    #side-panel.open{pointer-events:auto;animation:fpIn .55s cubic-bezier(.34,1.3,.64,1) forwards}
+    #side-panel.closing{animation:fpOut .32s cubic-bezier(.4,0,.8,.5) forwards}
+    #panel-list>div{animation:none}
+    #side-panel.open #panel-list>div:nth-child(1){animation:stagger .28s ease .18s both}
+    #side-panel.open #panel-list>div:nth-child(2){animation:stagger .28s ease .24s both}
+    #side-panel.open #panel-list>div:nth-child(3){animation:stagger .28s ease .30s both}
+    #side-panel.open #panel-list>div:nth-child(4){animation:stagger .28s ease .36s both}
+    #side-panel.open #panel-list>div:nth-child(n+5){animation:stagger .28s ease .42s both}
+    #modal-wrap{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+    #modal-wrap.show{opacity:1;pointer-events:auto}
+    #modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+    #modal-box{position:relative;background:white;border-radius:20px;padding:24px;width:100%;max-width:360px;box-shadow:var(--shf);transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+    #modal-wrap.show #modal-box{transform:scale(1) translateY(0)}
+    #settings-sheet{position:fixed;inset:0;z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+    #settings-sheet.show{opacity:1;pointer-events:auto}
+    #settings-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+    #settings-box{position:relative;width:100%;background:white;border-radius:24px 24px 0 0;padding:24px 20px;padding-bottom:max(24px,env(safe-area-inset-bottom));box-shadow:var(--shf);transform:translateY(40px);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:75vh;overflow-y:auto}
+    #settings-sheet.show #settings-box{transform:translateY(0)}
+    #cost-sheet{position:fixed;inset:0;z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+    #cost-sheet.show{opacity:1;pointer-events:auto}
+    #cost-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+    #cost-box{position:relative;width:100%;background:white;border-radius:24px 24px 0 0;padding:24px 20px;padding-bottom:max(24px,env(safe-area-inset-bottom));box-shadow:var(--shf);transform:translateY(40px);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+    #cost-sheet.show #cost-box{transform:translateY(0)}
+    .room-tab-bar{display:flex;overflow-x:auto;scrollbar-width:none;background:var(--surface2);border-bottom:1px solid var(--border);padding:0 4px;position:sticky;top:0;z-index:10;margin-bottom:2px}
+    .room-tab-bar::-webkit-scrollbar{display:none}
+    .room-tab{flex-shrink:0;padding:8px 13px;font-size:12px;font-weight:600;color:var(--t3);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;background:none;border-top:none;border-left:none;border-right:none}
+    .room-tab.active{color:var(--accent2);border-bottom-color:var(--accent2)}
+    .room-tab-add{flex-shrink:0;padding:8px 11px;font-size:17px;color:var(--accent2);background:none;border:none;cursor:pointer}
+    .photo-thumb{position:relative;width:68px;height:68px;border-radius:10px;overflow:hidden;flex-shrink:0;border:1.5px solid var(--border)}
+    .photo-thumb img{width:100%;height:100%;object-fit:cover}
+    .photo-rm{position:absolute;top:-3px;right:-3px;width:18px;height:18px;background:#ef4444;color:white;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;cursor:pointer}
+    .btn-pri{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--accent);color:white;font-size:14px;font-weight:700;padding:13px 20px;border-radius:12px;border:none;cursor:pointer;width:100%;transition:background .15s,transform .1s}
+    .btn-pri:active{background:#1e40af;transform:scale(.98)}
+    .btn-sec{display:flex;align-items:center;justify-content:center;gap:6px;background:white;color:var(--accent);font-size:14px;font-weight:700;padding:13px 20px;border-radius:12px;border:2px solid var(--accent);cursor:pointer;width:100%;transition:background .15s,transform .1s}
+    .btn-sec:active{background:#eff6ff;transform:scale(.98)}
+    .pill{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+    .yr-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;background:#fef3c7;border:1px solid #fde68a;font-size:10px;font-weight:600;color:#92400e}
+    #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:white;padding:10px 20px;border-radius:50px;font-size:13px;font-weight:600;z-index:500;opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
   </style>
 </head>
-
 <body>
 
-<!-- ════════════════════════════════════════
-     SIDE PANEL — Project Switcher
-═════════════════════════════════════════ -->
 <div id="panel-overlay" onclick="closePanel()"></div>
 <div id="side-panel">
-  <!-- Panel header -->
-  <div style="padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.07)">
+  <div style="padding:15px 15px 11px;border-bottom:1px solid rgba(255,255,255,.07)">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
-        <div style="font-size:9px;font-weight:800;letter-spacing:0.16em;color:#3b82f6;text-transform:uppercase;margin-bottom:4px">Spark Homes</div>
-        <div style="font-size:17px;font-weight:800;color:white;letter-spacing:-0.02em">My Estimates</div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:.16em;color:#3b82f6;text-transform:uppercase;margin-bottom:3px">Spark Homes</div>
+        <div style="font-size:16px;font-weight:800;color:white;letter-spacing:-.02em">My Estimates</div>
       </div>
-      <button onclick="closePanel()" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.5);flex-shrink:0;margin-top:2px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button onclick="closePanel()" style="width:27px;height:27px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;color:rgba(255,255,255,.5);flex-shrink:0;margin-top:1px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
   </div>
-  <!-- Project list -->
   <div id="panel-list" class="scroll-y" style="flex:1;min-height:0;overflow-y:auto;max-height:340px"></div>
-  <!-- Footer -->
-  <div style="padding:10px 12px 12px;border-top:1px solid rgba(255,255,255,0.06)">
-    <button onclick="newProject()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;background:linear-gradient(135deg,#1d4ed8,#2563eb);border:none;border-radius:11px;color:white;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.01em;transition:opacity 0.15s" onmouseenter="this.style.opacity='.88'" onmouseleave="this.style.opacity='1'">
+  <div style="padding:9px 11px 11px;border-top:1px solid rgba(255,255,255,.06)">
+    <button onclick="newProject()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;background:linear-gradient(135deg,#1d4ed8,#2563eb);border:none;border-radius:11px;color:white;font-size:13px;font-weight:700;cursor:pointer">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       New Estimate
     </button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════
-     MODAL — Rename / Confirm
-═════════════════════════════════════════ -->
 <div id="modal-wrap">
   <div id="modal-bg" onclick="closeModal()"></div>
   <div id="modal-box">
-    <h3 id="modal-title" style="font-size:17px;font-weight:700;color:var(--text-1);margin:0 0 16px"></h3>
-    <input id="modal-input" type="text" style="width:100%;padding:12px 14px;font-size:16px;border:1.5px solid var(--border-strong);border-radius:10px;outline:none;font-family:inherit;color:var(--text-1)" placeholder="" />
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn-secondary" onclick="closeModal()" style="font-size:14px">Cancel</button>
-      <button class="btn-primary" onclick="confirmModal()" style="font-size:14px" id="modal-confirm-btn">Save</button>
+    <h3 id="modal-title" style="font-size:17px;font-weight:700;color:var(--t1);margin:0 0 14px"></h3>
+    <input id="modal-input" type="text" style="width:100%;padding:11px 13px;font-size:16px;border:1.5px solid var(--border2);border-radius:10px;outline:none;font-family:inherit;color:var(--t1)"/>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-sec" onclick="closeModal()" style="font-size:14px">Cancel</button>
+      <button class="btn-pri" onclick="confirmModal()" style="font-size:14px">Save</button>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════
-     SETTINGS SHEET
-═════════════════════════════════════════ -->
 <div id="settings-sheet">
   <div id="settings-bg" onclick="closeSettings()"></div>
   <div id="settings-box">
-    <div class="sheet-pill"></div>
-    <h2 style="font-size:18px;font-weight:800;color:var(--text-1);margin:0 0 4px">Settings</h2>
-    <p style="font-size:13px;color:var(--text-3);margin:0 0 20px">Price schedule & preferences</p>
-
-    <h3 style="font-size:13px;font-weight:700;color:var(--text-2);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.06em">Price Schedule</h3>
-    <p style="font-size:12px;color:var(--text-3);margin:0 0 12px;line-height:1.5">Upload a CSV with <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11px">id</code> and <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11px">cost</code> columns to update prices globally.</p>
-    <div id="price-status" style="padding:10px 14px;background:var(--surface-2);border-radius:10px;font-size:12px;color:var(--text-3);margin-bottom:12px;border:1px solid var(--border)">Using default prices from Pricing_List.csv</div>
+    <div class="pill"></div>
+    <h2 style="font-size:18px;font-weight:800;color:var(--t1);margin:0 0 4px">Settings</h2>
+    <p style="font-size:13px;color:var(--t3);margin:0 0 18px">Price schedule & agent info</p>
+    <h3 style="font-size:12px;font-weight:700;color:var(--t2);margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em">Price Schedule</h3>
+    <div id="price-status" style="padding:9px 13px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--t3);margin-bottom:10px;border:1px solid var(--border)">Using default prices from Pricing_List.csv</div>
     <label style="display:block;cursor:pointer;margin-bottom:8px">
-      <div class="btn-primary" style="font-size:13px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="btn-pri" style="font-size:13px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Upload Updated Prices (CSV)
       </div>
       <input type="file" accept=".csv,.CSV" id="price-csv-input" style="display:none" onchange="handleCsvUpload(this)"/>
     </label>
-    <button id="reset-prices-btn" onclick="resetPrices()" style="display:none;width:100%;padding:11px;border-radius:10px;border:1.5px solid #fecaca;background:none;color:#ef4444;font-size:13px;font-weight:600;cursor:pointer">Reset to Default Prices</button>
-
-    <hr style="border:none;border-top:1px solid var(--border);margin:20px 0"/>
-    <h3 style="font-size:13px;font-weight:700;color:var(--text-2);margin:0 0 10px;text-transform:uppercase;letter-spacing:0.06em">Agent Info</h3>
-    <input id="agent-name-input" type="text" placeholder="Your name (appears on export)" style="width:100%;padding:11px 14px;font-size:15px;border:1.5px solid var(--border-strong);border-radius:10px;outline:none;font-family:inherit;color:var(--text-1);margin-bottom:8px" oninput="state.agentName=this.value;scheduleSave()"/>
-    <button class="btn-primary" onclick="closeSettings()" style="font-size:14px;margin-top:4px">Done</button>
+    <button id="reset-prices-btn" onclick="resetPrices()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1.5px solid #fecaca;background:none;color:#ef4444;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px">Reset to Default Prices</button>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0"/>
+    <h3 style="font-size:12px;font-weight:700;color:var(--t2);margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em">Agent Info</h3>
+    <input id="agent-name-input" type="text" placeholder="Your name (appears on export)" style="width:100%;padding:10px 13px;font-size:15px;border:1.5px solid var(--border2);border-radius:10px;outline:none;font-family:inherit;color:var(--t1);margin-bottom:10px" oninput="ST.agentName=this.value;scheduleSave()"/>
+    <button class="btn-pri" onclick="closeSettings()" style="font-size:14px">Done</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════
-     INLINE COST EDIT SHEET
-═════════════════════════════════════════ -->
-<div id="cost-edit-sheet" style="position:fixed;inset:0;z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.25s">
-  <div id="cost-edit-bg" onclick="closeCostEdit()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px)"></div>
-  <div id="cost-edit-box" style="position:relative;width:100%;background:white;border-radius:24px 24px 0 0;padding:24px 20px;padding-bottom:max(24px,env(safe-area-inset-bottom));box-shadow:var(--shadow-float);transform:translateY(40px);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)">
-    <div class="sheet-pill"></div>
-    <h3 id="cost-edit-title" style="font-size:16px;font-weight:700;color:var(--text-1);margin:0 0 4px">Edit Unit Cost</h3>
-    <p id="cost-edit-unit" style="font-size:12px;color:var(--text-3);margin:0 0 16px"></p>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <span style="font-size:22px;font-weight:700;color:var(--text-2)">$</span>
-      <input id="cost-edit-input" type="number" step="0.01" min="0" inputmode="decimal" style="flex:1;padding:13px 14px;font-size:20px;font-family:'DM Mono',monospace;font-weight:600;border:2px solid var(--accent-light);border-radius:12px;outline:none;color:var(--text-1)" />
+<div id="cost-sheet">
+  <div id="cost-bg" onclick="closeCostEdit()"></div>
+  <div id="cost-box">
+    <div class="pill"></div>
+    <h3 id="cost-title" style="font-size:16px;font-weight:700;color:var(--t1);margin:0 0 3px"></h3>
+    <p id="cost-unit" style="font-size:12px;color:var(--t3);margin:0 0 14px"></p>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:22px;font-weight:700;color:var(--t2)">$</span>
+      <input id="cost-inp" type="number" step="0.01" min="0" inputmode="decimal" style="flex:1;padding:12px 13px;font-size:20px;font-family:'DM Mono',monospace;font-weight:600;border:2px solid var(--accent2);border-radius:12px;outline:none;color:var(--t1)"/>
     </div>
     <div style="display:flex;gap:10px">
-      <button class="btn-secondary" onclick="closeCostEdit()" style="font-size:14px">Cancel</button>
-      <button class="btn-primary" onclick="saveCostEdit()" style="font-size:14px">Update Price</button>
+      <button class="btn-sec" onclick="closeCostEdit()" style="font-size:14px">Cancel</button>
+      <button class="btn-pri" onclick="saveCostEdit()" style="font-size:14px">Update Price</button>
     </div>
-    <button id="cost-reset-btn" onclick="resetItemCost()" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;font-size:12px;color:var(--text-3);cursor:pointer">Reset to default</button>
+    <button id="cost-reset-btn" onclick="resetItemCost()" style="width:100%;margin-top:8px;padding:9px;background:none;border:none;font-size:12px;color:var(--t3);cursor:pointer">Reset to default</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════
-     TOAST
-═════════════════════════════════════════ -->
 <div id="toast"></div>
-
-<!-- ════════════════════════════════════════
-     HIDDEN PHOTO INPUT
-═════════════════════════════════════════ -->
 <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoCapture(this)"/>
-
-<!-- ════════════════════════════════════════
-     MAIN APP
-═════════════════════════════════════════ -->
 <div id="app"></div>
 
 <script>
 'use strict';
 
-// ╔══════════════════════════════════════════╗
-// ║           PHASE 1: SHELL & STATE         ║
-// ╚══════════════════════════════════════════╝
-
-// ── SVG Icons ─────────────────────────────
-const ICONS = {
-  menu:     `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
-  settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-  export:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
-  pencil:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
-  trash:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
-  check:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  chevDown: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>`,
-  camera:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2l2-3h8l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
-  spark:    `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
-  swipeR:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`,
-  swipeL:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
-  money:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L6 7h12l-2-4z"/><circle cx="12" cy="14" r="2"/></svg>`,
-  back:     `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+// ══ ICONS ══
+const IC={
+  menu:`<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+  cog:`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  exp:`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  pen:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+  chk:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  chkG:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  chev:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>`,
+  cam:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2l2-3h8l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  spark:`<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+  swR:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  swL:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  back:`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  money:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8L6 7h12l-2-4z"/><circle cx="12" cy="14" r="2"/></svg>`,
 };
 
-// ── Constants ──────────────────────────────
-const STORAGE_KEY    = 'sparkEstimator_v3';
-const PRICES_KEY     = 'sparkPrices_v3';
-const AGENT_KEY      = 'sparkAgent_v1';
+// ══ PHASE 2: DATA LAYER ══
 
-// ── Data Layer (Phase 2 placeholder) ──────
-// Full CATEGORIES, GROUPS, calc functions will be injected in Phase 2.
-// For Phase 1 we define stubs so the shell renders without errors.
-const CATEGORIES = []; // → replaced in Phase 2
-const GROUPS = {};     // → replaced in Phase 2
-
-function calcRunningTotal() { return Object.values(state.items).reduce((t,s)=>{ if(!s||!s.checked)return t; const def=findItemDef(s._id); if(!def)return t; const q=parseFloat(s.qty)||0; if(!q)return t; const c=getItemCost(def); const raw=q*c; return t+(def.min?Math.max(raw,def.min):raw); },0); }
-function calcCategoryTotal(cat) { if(!cat)return 0; if(cat.type==='multi'){ return (state.bathrooms?.instances||[]).reduce((t,b)=>t+calcBathTotal(b),0)+(state.bedrooms?.instances||[]).reduce((t,b)=>t+calcRoomTotal(b,'bedroom'),0)+(state.livingAreas?.instances||[]).reduce((t,la)=>t+calcRoomTotal(la,'living'),0); } return (cat.items||[]).reduce((t,item)=>{ const s=state.items[item.id]; if(!s||!s.checked)return t; const q=parseFloat(s.qty)||0; if(!q)return t; const c=getItemCost(item); const raw=q*c; return t+(item.min?Math.max(raw,item.min):raw); },0); }
-function calcBathTotal(bath) { return 0; } // stub — Phase 2
-function calcRoomTotal(room,type) { return 0; } // stub — Phase 2
-function calcProgress() { return {checked:0,total:19}; } // stub — Phase 2
-
-// ── Price overrides ────────────────────────
-function loadPriceOverrides() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)||'{}'); } catch { return {}; } }
-function savePriceOverrides() { try { localStorage.setItem(PRICES_KEY,JSON.stringify(state.priceOverrides)); } catch {} }
-function getItemCost(item) { if(!item)return 0; const ov=state.priceOverrides?.[item.id]; return ov!==undefined?ov:item.cost; }
-function findItemDef(id) { if(!id)return null; if(id.includes(':')){ const parts=id.split(':'); const realId=parts[parts.length-1]; return CATEGORIES.flatMap(c=>c.items||[]).find(i=>i.id===realId)||null; } return CATEGORIES.flatMap(c=>c.items||[]).find(i=>i.id===id)||null; }
-
-// ── State ──────────────────────────────────
-const state = {
-  view: 'main',           // 'main' | 'summary'
-  currentCat: 0,
-  currentProjectId: null,
-  currentProjectName: 'New Estimate',
-  items: {},
-  photos: {},
-  priceOverrides: {},
-  expandedGroups: new Set(),
-  agentName: '',
-  arv: '',
-  purchasePrice: '',
-  bathrooms: { instances: [{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}], current: 0 },
-  bedrooms:  { instances: [{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}], current: 0 },
-  livingAreas: { instances: [{id:'la1',name:'Living / Common'}], current: 0 },
+const ITEMS={
+  'ig-01':{id:'ig-01',name:'Refinish Hardwood Floor',cost:2.35,unit:'sqft'},
+  'ig-02':{id:'ig-02',name:'New Hardwoods 1.5"',cost:10.00,unit:'sqft'},
+  'ig-03':{id:'ig-03',name:'New Hardwoods 2"',cost:4.75,unit:'sqft'},
+  'ig-04':{id:'ig-04',name:'Hardwood Splicing',cost:8.40,unit:'sqft'},
+  'ig-05':{id:'ig-05',name:'Vinyl Plank',cost:2.50,unit:'sqft'},
+  'ig-06':{id:'ig-06',name:'Carpet',cost:1.90,unit:'sqft'},
+  'ig-07':{id:'ig-07',name:'Interior Paint — 2 Tone',cost:2.95,unit:'sqft'},
+  'ig-08':{id:'ig-08',name:'Drywall Repair',cost:900.00,unit:'1,000 sqft'},
+  'ig-09':{id:'ig-09',name:'Wallpaper Removal',cost:250.00,unit:'room'},
+  'ig-10':{id:'ig-10',name:'Interior Door — Hollow Slab',cost:125.00,unit:'ea.'},
+  'ig-11':{id:'ig-11',name:'Interior Door Hardware',cost:25.00,unit:'ea.'},
+  'ig-12':{id:'ig-12',name:'Bifold Door with Framing',cost:400.00,unit:'ea.'},
+  'ig-13':{id:'ig-13',name:'Interior Door — Pre-hung',cost:200.00,unit:'ea.'},
+  'ig-14':{id:'ig-14',name:'Front Entry Door',cost:475.00,unit:'ea.',min:500},
+  'ig-15':{id:'ig-15',name:'Front Entry Door Hardware',cost:80.00,unit:'ea.',min:75},
+  'ig-16':{id:'ig-16',name:'Exterior Door Hardware',cost:75.00,unit:'handle'},
+  'ig-17':{id:'ig-17',name:'Exterior Insulated Side Door (Installed)',cost:500.00,unit:'ea.'},
+  'ig-18':{id:'ig-18',name:'Sliding Glass Door',cost:1025.00,unit:'ea.'},
+  'ig-19':{id:'ig-19',name:'Trim Out (Casing, Crown, Baseboard)',cost:3.75,unit:'LF',min:500},
+  'ig-20':{id:'ig-20',name:'MISC / Punch List',cost:2650.00,unit:'flat',min:2650},
+  'ig-21':{id:'ig-21',name:'Finish Out Labor',cost:1350.00,unit:'flat',min:1350},
+  'ig-22':{id:'ig-22',name:'Light Fixtures',cost:70.00,unit:'100 sqft'},
+  'ig-23':{id:'ig-23',name:'Bedbug Spray / Heat Treat',cost:475.00,unit:'ea.',min:100},
+  'ig-24':{id:'ig-24',name:'Termite Treatment',cost:650.00,unit:'ea.'},
+  'ig-25':{id:'ig-25',name:'Demo',cost:1375.00,unit:'variable',min:1375},
+  'ig-26':{id:'ig-26',name:'Haul Off',cost:725.00,unit:'load'},
+  'ig-27':{id:'ig-27',name:'Final Cleaning',cost:325.00,unit:'flat',min:250},
+  'ig-28':{id:'ig-28',name:'Staging',cost:0.90,unit:'sqft'},
+  'kt-01':{id:'kt-01',name:'Hinges and Pulls',cost:275.00,unit:'kitchen',min:275},
+  'kt-02':{id:'kt-02',name:'Cabinets Uppers',cost:125.00,unit:'LF'},
+  'kt-03':{id:'kt-03',name:'Cabinets Lowers',cost:150.00,unit:'LF'},
+  'kt-04':{id:'kt-04',name:'Cabinet Door Faces Only',cost:80.00,unit:'door'},
+  'kt-05':{id:'kt-05',name:'Cabinets (Labor & Paint)',cost:1100.00,unit:'kitchen',min:1100},
+  'kt-06':{id:'kt-06',name:'Granite + 4" Splash Guard',cost:40.00,unit:'LF',min:1050},
+  'kt-07':{id:'kt-07',name:'Backsplash',cost:725.00,unit:'house',min:725},
+  'kt-08':{id:'kt-08',name:'Misc Woodwork',cost:500.00,unit:'variable',min:500},
+  'kt-09':{id:'kt-09',name:'Tile — Large Areas',cost:6.45,unit:'sqft'},
+  'kt-10':{id:'kt-10',name:'Tile — Small Areas',cost:10.00,unit:'sqft'},
+  'kt-11':{id:'kt-11',name:'Undermount Kitchen Sink',cost:325.00,unit:'ea.'},
+  'kt-12':{id:'kt-12',name:'Microwave / Hood',cost:500.00,unit:'ea.'},
+  'kt-13':{id:'kt-13',name:'Range',cost:725.00,unit:'ea.'},
+  'kt-14':{id:'kt-14',name:'Wall Oven',cost:1075.00,unit:'ea.'},
+  'kt-15':{id:'kt-15',name:'Cooktop',cost:550.00,unit:'ea.'},
+  'kt-16':{id:'kt-16',name:'Dishwasher',cost:575.00,unit:'ea.'},
+  'kt-17':{id:'kt-17',name:'Fridge',cost:1175.00,unit:'ea.'},
+  'ba-01':{id:'ba-01',name:'Granite ($/LF)',cost:35.00,unit:'LF'},
+  'ba-02':{id:'ba-02',name:'New Bottom Vanity',cost:125.00,unit:'LF'},
+  'ba-03':{id:'ba-03',name:'Home Depot Vanity w/ Sink (18")',cost:225.00,unit:'ea.'},
+  'ba-04':{id:'ba-04',name:'Toilet',cost:150.00,unit:'ea.'},
+  'ba-05':{id:'ba-05',name:'Tile — Large Areas',cost:5.80,unit:'sqft'},
+  'ba-06':{id:'ba-06',name:'Tile — Small Areas',cost:10.00,unit:'sqft'},
+  'ba-07':{id:'ba-07',name:'Reglaze Tub or Chemical Clean',cost:350.00,unit:'ea.'},
+  'ba-08':{id:'ba-08',name:'Reglaze Tub + Surround',cost:750.00,unit:'ea.'},
+  'ba-09':{id:'ba-09',name:'Reglaze Shower',cost:1325.00,unit:'ea.'},
+  'ba-10':{id:'ba-10',name:'Tiled Shower Tear Out + Tile Install',cost:3100.00,unit:'ea.'},
+  'ba-11':{id:'ba-11',name:'Tub Tile Surround Tear Out + Tile Install (incl. tub)',cost:2250.00,unit:'ea.'},
+  'ba-12':{id:'ba-12',name:'Shower Plastic Insert Tear Out + New Insert',cost:825.00,unit:'ea.'},
+  'ba-13':{id:'ba-13',name:'Tub Tear Out + New Insert & Tub',cost:1575.00,unit:'ea.'},
+  'ba-14':{id:'ba-14',name:'Undermount Sink',cost:150.00,unit:'ea.'},
+  'ba-15':{id:'ba-15',name:'Mirror',cost:200.00,unit:'ea.'},
+  'ba-16':{id:'ba-16',name:'HVL (needed if no window)',cost:275.00,unit:'ea.'},
+  'as-01':{id:'as-01',name:'Furnace',cost:3350.00,unit:'ea.',needYear:true},
+  'as-02':{id:'as-02',name:'Condensing Unit',cost:3300.00,unit:'ea.',needYear:true},
+  'as-03':{id:'as-03',name:'Package Unit',cost:4700.00,unit:'ea.'},
+  'as-04':{id:'as-04',name:'A-Coil (if no condensing unit)',cost:1625.00,unit:'ea.'},
+  'as-05':{id:'as-05',name:'Ducting (if NO HVAC)',cost:3200.00,unit:'ea.'},
+  'as-06':{id:'as-06',name:'Duct Cleaning — Floor Vents',cost:550.00,unit:'ea.'},
+  'as-07':{id:'as-07',name:'Window Unit Replacement 220',cost:575.00,unit:'ea.'},
+  'as-08':{id:'as-08',name:'Hot Water Heater w/ Expansion Tank',cost:1425.00,unit:'ea.',needYear:true},
+  'as-09':{id:'as-09',name:'Hot Water Heater Expansion Tank Only',cost:200.00,unit:'ea.'},
+  'as-10':{id:'as-10',name:'Switches / Outlets',cost:1400.00,unit:'house',min:1400},
+  'as-11':{id:'as-11',name:'Standard Electrical',cost:1650.00,unit:'house',min:1650},
+  'as-12':{id:'as-12',name:'Subfloor',cost:8.20,unit:'sqft'},
+  'as-13':{id:'as-13',name:'Framing',cost:950.00,unit:'variable',min:950},
+  'as-14':{id:'as-14',name:'Structural (Pier)',cost:375.00,unit:'pier'},
+  'as-15':{id:'as-15',name:'Structural Foam Injection',cost:5.85,unit:'sqft of affected area'},
+  'as-16':{id:'as-16',name:'Roof',cost:1100.00,unit:'225 sqft L&M'},
+  'as-17':{id:'as-17',name:'Plumbing',cost:1000.00,unit:'variable',min:1000},
+  'as-18':{id:'as-18',name:'Electrical Panel Swap to 200A',cost:2350.00,unit:'ea.'},
+  'as-19':{id:'as-19',name:'Full Electrical Rewire (to Studs)',cost:5.65,unit:'sqft'},
+  'as-20':{id:'as-20',name:'Full Electrical Rewire (leaving Drywall)',cost:9.15,unit:'sqft'},
+  'as-21':{id:'as-21',name:'Wall Insulation (to Studs)',cost:1.20,unit:'sqft'},
+  'as-22':{id:'as-22',name:'Attic Insulation',cost:1225.00,unit:'1,600 sqft house',min:1225},
+  'as-23':{id:'as-23',name:'New Drywall to Studs (L&M)',cost:5.20,unit:'sqft'},
+  'as-24':{id:'as-24',name:'Aluminum Wiring',cost:2450.00,unit:'variable',min:2450},
+  'ex-01':{id:'ex-01',name:'Fence Repair — Chain Link / Wood Gate',cost:225.00,unit:'variable',min:225},
+  'ex-02':{id:'ex-02',name:'Fence Repair — Chain Link',cost:275.00,unit:'LF'},
+  'ex-03':{id:'ex-03',name:'Fence Repair — Privacy 6ft',cost:30.00,unit:'LF'},
+  'ex-04':{id:'ex-04',name:'Landscaping',cost:450.00,unit:'variable',min:450},
+  'ex-05':{id:'ex-05',name:"Vinyl Siding (10'×10')",cost:300.00,unit:'square'},
+  'ex-06':{id:'ex-06',name:'Tuck Pointing',cost:225.00,unit:'variable',min:225},
+  'ex-07':{id:'ex-07',name:'Exterior Paint',cost:2.60,unit:'sqft'},
+  'ex-08':{id:'ex-08',name:'Exterior Wood Repair',cost:525.00,unit:'variable',min:500},
+  'ex-09':{id:'ex-09',name:"Siding Repair (10'×10')",cost:975.00,unit:'section'},
+  'ex-10':{id:'ex-10',name:'Tree Trimming',cost:450.00,unit:'variable',min:450},
+  'ex-11':{id:'ex-11',name:'Tree Removal (w/o stump)',cost:1450.00,unit:'tree'},
+  'ex-12':{id:'ex-12',name:'Stump Grinding',cost:250.00,unit:'stump'},
+  'ex-13':{id:'ex-13',name:'Aluminum Window Paint (Int/Ext)',cost:700.00,unit:'house',min:700},
+  'ex-14':{id:'ex-14',name:'Windows (3×5 sash)',cost:425.00,unit:'ea.'},
+  'ex-15':{id:'ex-15',name:'Window Repair — Non-Insulated (6×6+)',cost:35.00,unit:'sf'},
+  'ex-16':{id:'ex-16',name:'Window Repair — Insulated (6×6+)',cost:40.00,unit:'sf'},
+  'ex-17':{id:'ex-17',name:'Aluminum Framed Window Pane',cost:100.00,unit:'pane'},
+  'ex-18':{id:'ex-18',name:'Guttering',cost:4.15,unit:'LF'},
+  'ex-19':{id:'ex-19',name:'Concrete w/ Demo',cost:200.00,unit:'sqft'},
+  'ex-20':{id:'ex-20',name:'Mowing (summer, every 2 weeks)',cost:45.00,unit:'mowing'},
+  'ex-21':{id:'ex-21',name:'Garage Door — 1 Car',cost:975.00,unit:'ea.'},
+  'ex-22':{id:'ex-22',name:'Garage Door — 2 Car (Installed)',cost:1225.00,unit:'ea.'},
+  'ex-23':{id:'ex-23',name:'Garage Conversion',cost:8850.00,unit:'ea.'},
 };
 
-// ── localStorage ───────────────────────────
-function loadProjects() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); } catch { return []; } }
-function saveProjects(list) { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(list)); } catch { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(list.map(p=>({...p,photos:{}})))); } catch {} } }
-function saveCurrentState() {
-  if(!state.currentProjectId) return;
-  const list = loadProjects();
-  const snap = {
-    id: state.currentProjectId,
-    name: state.currentProjectName,
-    savedAt: new Date().toISOString(),
-    items: state.items,
-    photos: state.photos,
-    bathroomInstances: state.bathrooms.instances,
-    bedroomInstances: state.bedrooms.instances,
-    livingAreaInstances: state.livingAreas.instances,
-    arv: state.arv,
-    purchasePrice: state.purchasePrice,
-  };
-  const idx = list.findIndex(p=>p.id===state.currentProjectId);
-  if(idx>=0) list[idx]=snap; else list.unshift(snap);
-  saveProjects(list);
-}
-let _saveTimer;
-function scheduleSave() { clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>{ saveCurrentState(); showToast('Saved'); },900); }
+const GROUPS={
+  'ig:flooring': {label:'Flooring',        ids:['ig-01','ig-02','ig-03','ig-04','ig-05','ig-06']},
+  'ig:paint':    {label:'Paint & Wall',     ids:['ig-07','ig-08','ig-09']},
+  'ig:doors':    {label:'Doors & Trim',     ids:['ig-10','ig-11','ig-12','ig-13','ig-14','ig-15','ig-16','ig-17','ig-18','ig-19']},
+  'ig:pest':     {label:'Pest Control',     ids:['ig-23','ig-24']},
+  'kt:cabinets': {label:'Cabinets',         ids:['kt-01','kt-02','kt-03','kt-04','kt-05']},
+  'kt:counters': {label:'Countertops & Tile',ids:['kt-06','kt-07','kt-08','kt-09','kt-10']},
+  'kt:appliances':{label:'Appliances',      ids:['kt-11','kt-12','kt-13','kt-14','kt-15','kt-16','kt-17']},
+  'ba:vanity':   {label:'Vanity & Countertop',ids:['ba-01','ba-02','ba-03','ba-04','ba-14','ba-15','ba-16']},
+  'ba:tubshower':{label:'Tub & Shower',     ids:['ba-07','ba-08','ba-09','ba-10','ba-11','ba-12','ba-13']},
+  'ba:tile':     {label:'Tile',             ids:['ba-05','ba-06']},
+  'as:hvac':     {label:'HVAC',             ids:['as-01','as-02','as-03','as-04','as-05','as-06','as-07']},
+  'as:water':    {label:'Water Heater',     ids:['as-08','as-09']},
+  'as:electrical':{label:'Electrical',      ids:['as-10','as-11','as-18','as-19','as-20','as-24']},
+  'as:structural':{label:'Structural',      ids:['as-12','as-13','as-14','as-15','as-16']},
+  'as:plumbing': {label:'Plumbing',         ids:['as-17']},
+  'as:insulation':{label:'Insulation & Drywall',ids:['as-21','as-22','as-23']},
+  'ex:fence':    {label:'Fence',            ids:['ex-01','ex-02','ex-03']},
+  'ex:siding':   {label:'Siding & Paint',   ids:['ex-04','ex-05','ex-06','ex-07','ex-08','ex-09']},
+  'ex:windows':  {label:'Windows & Gutters',ids:['ex-13','ex-14','ex-15','ex-16','ex-17','ex-18']},
+  'ex:garage':   {label:'Garage',           ids:['ex-19','ex-20','ex-21','ex-22','ex-23']},
+  'ex:trees':    {label:'Trees',            ids:['ex-10','ex-11','ex-12']},
+};
 
-function initBlankState() {
-  state.items = {};
-  state.photos = {};
-  state.arv = '';
-  state.purchasePrice = '';
-  state.expandedGroups = new Set();
-  CATEGORIES.forEach(cat=>{
-    if(cat.type==='multi') return;
-    (cat.items||[]).forEach(item=>{ state.items[item.id]={_id:item.id,checked:false,qty:'',year:''}; });
+const SECTIONS=[
+  {id:'interior',name:'Interior', groups:['ig:flooring','ig:paint','ig:doors','ig:pest'],  misc:['ig-20','ig-21','ig-22','ig-25','ig-26','ig-27','ig-28']},
+  {id:'kitchen', name:'Kitchen',  groups:['kt:cabinets','kt:counters','kt:appliances'],    misc:[]},
+  {id:'bathroom',name:'Bathrooms',groups:['ba:vanity','ba:tubshower','ba:tile'],           misc:[], multi:'bathrooms'},
+  {id:'systems', name:'Systems',  groups:['as:hvac','as:water','as:electrical','as:structural','as:plumbing','as:insulation'],misc:[]},
+  {id:'exterior',name:'Exterior', groups:['ex:fence','ex:siding','ex:windows','ex:garage','ex:trees'],misc:[]},
+  {id:'bedrooms',name:'Bedrooms', groups:[],misc:[],multi:'bedrooms'},
+  {id:'living',  name:'Living',   groups:[],misc:[],multi:'living'},
+];
+
+const BD_GROUPS=[
+  {id:'bd:flooring',label:'Flooring',ids:['ig-01','ig-02','ig-03','ig-05','ig-06']},
+  {id:'bd:paint',   label:'Paint',   ids:['ig-07','ig-09']},
+  {id:'bd:doors',   label:'Doors',   ids:['ig-10','ig-11','ig-12','ig-13']},
+];
+const LA_GROUPS=[
+  {id:'la:flooring',label:'Flooring',ids:['ig-01','ig-02','ig-03','ig-05','ig-06']},
+  {id:'la:paint',   label:'Paint',   ids:['ig-07','ig-09']},
+  {id:'la:doors',   label:'Doors',   ids:['ig-10','ig-11','ig-13','ig-14','ig-18']},
+];
+
+function getCost(def){if(!def)return 0;const ov=ST.po[def.id];return ov!==undefined?ov:def.cost;}
+function lineTotal(def,sk){const s=ST.items[sk];if(!s||!s.chk)return 0;const q=parseFloat(s.qty)||0;if(!q)return 0;const raw=q*getCost(def);return def.min?Math.max(raw,def.min):raw;}
+function calcTotal(){let t=0;Object.keys(ST.items).forEach(sk=>{const rawId=sk.includes(':')?sk.split(':').pop():sk;const def=ITEMS[rawId];if(!def)return;t+=lineTotal(def,sk);});return t;}
+function calcSecTotal(sec){
+  let t=0;
+  if(sec.multi==='bathrooms'){ST.bathrooms.inst.forEach(b=>{sec.groups.forEach(gid=>{(GROUPS[gid]?.ids||[]).forEach(iid=>{t+=lineTotal(ITEMS[iid],`${b.id}:${iid}`);});});});}
+  else if(sec.multi==='bedrooms'){ST.bedrooms.inst.forEach(b=>{BD_GROUPS.forEach(g=>{g.ids.forEach(iid=>{t+=lineTotal(ITEMS[iid],`${b.id}:${iid}`);});});});}
+  else if(sec.multi==='living'){ST.living.inst.forEach(la=>{LA_GROUPS.forEach(g=>{g.ids.forEach(iid=>{t+=lineTotal(ITEMS[iid],`${la.id}:${iid}`);});});});}
+  else{sec.groups.forEach(gid=>{(GROUPS[gid]?.ids||[]).forEach(iid=>{t+=lineTotal(ITEMS[iid],iid);});});(sec.misc||[]).forEach(iid=>{t+=lineTotal(ITEMS[iid],iid);});}
+  return t;
+}
+function calcGrpTotal(gid,prefix){
+  const g=GROUPS[gid]||BD_GROUPS.find(x=>x.id===gid)||LA_GROUPS.find(x=>x.id===gid);
+  if(!g)return 0;
+  return(g.ids||[]).reduce((t,iid)=>t+lineTotal(ITEMS[iid],prefix?`${prefix}:${iid}`:iid),0);
+}
+function isGrpDone(gid,prefix){
+  const naKey=prefix?`${prefix}:${gid}:na`:`${gid}:na`;
+  if(ST.na[naKey])return true;
+  const g=GROUPS[gid]||BD_GROUPS.find(x=>x.id===gid)||LA_GROUPS.find(x=>x.id===gid);
+  if(!g)return false;
+  return(g.ids||[]).some(iid=>{const s=ST.items[prefix?`${prefix}:${iid}`:iid];return s&&s.chk;});
+}
+function calcProgress(){
+  let chk=0,tot=0;
+  SECTIONS.forEach(sec=>{
+    if(sec.multi==='bathrooms'){sec.groups.forEach(gid=>{tot++;if(ST.bathrooms.inst.some(b=>isGrpDone(gid,b.id)))chk++;});}
+    else if(sec.multi==='bedrooms'){ST.bedrooms.inst.forEach(b=>{BD_GROUPS.forEach(g=>{tot++;if(isGrpDone(g.id,b.id))chk++;});});}
+    else if(sec.multi==='living'){ST.living.inst.forEach(la=>{LA_GROUPS.forEach(g=>{tot++;if(isGrpDone(g.id,la.id))chk++;});});}
+    else{sec.groups.forEach(gid=>{tot++;if(isGrpDone(gid,null))chk++;});}
   });
-  // Bathroom instances
-  state.bathrooms.instances.forEach(b=>{
-    const bathCat = CATEGORIES.find(c=>c.id==='bathroom');
-    (bathCat?.items||[]).forEach(item=>{ state.items[`${b.id}:${item.id}`]={_id:`${b.id}:${item.id}`,checked:false,qty:'',year:''}; });
+  return{chk,tot};
+}
+
+// ══ STATE ══
+const SK='sparkV5',PK='sparkPrV5',AK='sparkAg';
+const ST={
+  cat:0,view:'main',pid:null,pname:'New Estimate',
+  items:{},photos:{},na:{},po:{},open:new Set(),
+  agentName:'',arv:'',purchase:'',
+  bathrooms:{inst:[{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}],cur:0},
+  bedrooms: {inst:[{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}],cur:0},
+  living:   {inst:[{id:'la1',name:'Living / Common'}],cur:0},
+};
+function loadProjects(){try{return JSON.parse(localStorage.getItem(SK)||'[]');}catch{return[];}}
+function saveProjects(l){try{localStorage.setItem(SK,JSON.stringify(l));}catch{try{localStorage.setItem(SK,JSON.stringify(l.map(p=>({...p,photos:{}}))));}catch{}}}
+function saveST(){
+  if(!ST.pid)return;
+  const l=loadProjects();
+  const snap={id:ST.pid,name:ST.pname,savedAt:new Date().toISOString(),items:ST.items,photos:ST.photos,na:ST.na,bathRooms:ST.bathrooms.inst,bdRooms:ST.bedrooms.inst,laRooms:ST.living.inst,arv:ST.arv,purchase:ST.purchase};
+  const i=l.findIndex(p=>p.id===ST.pid);
+  if(i>=0)l[i]=snap;else l.unshift(snap);
+  saveProjects(l);
+}
+let _st;function scheduleSave(){clearTimeout(_st);_st=setTimeout(()=>{saveST();showToast('Saved');},900);}
+
+function blankItems(){
+  ST.items={};ST.photos={};ST.na={};ST.open=new Set();ST.arv='';ST.purchase='';
+  SECTIONS.forEach(sec=>{
+    if(sec.multi)return;
+    sec.groups.forEach(gid=>{(GROUPS[gid]?.ids||[]).forEach(iid=>{ST.items[iid]={chk:false,qty:'',yr:''};});});
+    (sec.misc||[]).forEach(iid=>{ST.items[iid]={chk:false,qty:'',yr:''};});
   });
-  // Bedroom instances
-  state.bedrooms.instances.forEach(b=>{
-    const bdCat = CATEGORIES.find(c=>c.id==='bedroom');
-    (bdCat?.items||[]).forEach(item=>{ state.items[`${b.id}:${item.id}`]={_id:`${b.id}:${item.id}`,checked:false,qty:'',year:''}; });
+  ST.bathrooms.inst.forEach(b=>{['ba:vanity','ba:tubshower','ba:tile'].forEach(gid=>{(GROUPS[gid]?.ids||[]).forEach(iid=>{ST.items[`${b.id}:${iid}`]={chk:false,qty:'',yr:''};});});});
+  ST.bedrooms.inst.forEach(b=>{BD_GROUPS.forEach(g=>{g.ids.forEach(iid=>{ST.items[`${b.id}:${iid}`]={chk:false,qty:'',yr:''};});});});
+  ST.living.inst.forEach(la=>{LA_GROUPS.forEach(g=>{g.ids.forEach(iid=>{ST.items[`${la.id}:${iid}`]={chk:false,qty:'',yr:''};});});});
+}
+function fillKeys(){
+  SECTIONS.forEach(sec=>{
+    if(sec.multi)return;
+    sec.groups.forEach(gid=>{(GROUPS[gid]?.ids||[]).forEach(iid=>{if(!ST.items[iid])ST.items[iid]={chk:false,qty:'',yr:''};});});
+    (sec.misc||[]).forEach(iid=>{if(!ST.items[iid])ST.items[iid]={chk:false,qty:'',yr:''};});
   });
-  // Living area instances
-  state.livingAreas.instances.forEach(la=>{
-    const laCat = CATEGORIES.find(c=>c.id==='living');
-    (laCat?.items||[]).forEach(item=>{ state.items[`${la.id}:${item.id}`]={_id:`${la.id}:${item.id}`,checked:false,qty:'',year:''}; });
-  });
+  ST.bathrooms.inst.forEach(b=>{['ba:vanity','ba:tubshower','ba:tile'].forEach(gid=>{(GROUPS[gid]?.ids||[]).forEach(iid=>{const k=`${b.id}:${iid}`;if(!ST.items[k])ST.items[k]={chk:false,qty:'',yr:''};});});});
+  ST.bedrooms.inst.forEach(b=>{BD_GROUPS.forEach(g=>{g.ids.forEach(iid=>{const k=`${b.id}:${iid}`;if(!ST.items[k])ST.items[k]={chk:false,qty:'',yr:''};});});});
+  ST.living.inst.forEach(la=>{LA_GROUPS.forEach(g=>{g.ids.forEach(iid=>{const k=`${la.id}:${iid}`;if(!ST.items[k])ST.items[k]={chk:false,qty:'',yr:''};});});});
+}
+function loadProject(p){
+  ST.pid=p.id;ST.pname=p.name;ST.items=p.items||{};ST.photos=p.photos||{};ST.na=p.na||{};
+  ST.arv=p.arv||'';ST.purchase=p.purchase||'';
+  ST.bathrooms.inst=p.bathRooms||[{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}];
+  ST.bedrooms.inst=p.bdRooms||[{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}];
+  ST.living.inst=p.laRooms||[{id:'la1',name:'Living / Common'}];
+  ST.bathrooms.cur=0;ST.bedrooms.cur=0;ST.living.cur=0;
+  ST.cat=0;ST.view='main';ST.open=new Set();
+  fillKeys();
 }
 
-function loadProjectIntoState(proj) {
-  state.currentProjectId = proj.id;
-  state.currentProjectName = proj.name;
-  state.items = proj.items || {};
-  state.photos = proj.photos || {};
-  state.arv = proj.arv || '';
-  state.purchasePrice = proj.purchasePrice || '';
-  state.bathrooms.instances = proj.bathroomInstances || [{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}];
-  state.bedrooms.instances = proj.bedroomInstances || [{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}];
-  state.livingAreas.instances = proj.livingAreaInstances || [{id:'la1',name:'Living / Common'}];
-  state.bathrooms.current = 0;
-  state.bedrooms.current = 0;
-  state.livingAreas.current = 0;
-  state.currentCat = 0;
-  state.view = 'main';
-  state.expandedGroups = new Set();
-  // Fill missing keys for any new items added since last save
-  CATEGORIES.forEach(cat=>{
-    if(cat.type==='multi') return;
-    (cat.items||[]).forEach(item=>{ if(!state.items[item.id]) state.items[item.id]={_id:item.id,checked:false,qty:'',year:''}; });
-  });
-  state.bathrooms.instances.forEach(b=>{
-    const bathCat=CATEGORIES.find(c=>c.id==='bathroom');
-    (bathCat?.items||[]).forEach(item=>{ const k=`${b.id}:${item.id}`; if(!state.items[k]) state.items[k]={_id:k,checked:false,qty:'',year:''}; });
-  });
-  state.bedrooms.instances.forEach(b=>{
-    const bdCat=CATEGORIES.find(c=>c.id==='bedroom');
-    (bdCat?.items||[]).forEach(item=>{ const k=`${b.id}:${item.id}`; if(!state.items[k]) state.items[k]={_id:k,checked:false,qty:'',year:''}; });
-  });
-  state.livingAreas.instances.forEach(la=>{
-    const laCat=CATEGORIES.find(c=>c.id==='living');
-    (laCat?.items||[]).forEach(item=>{ const k=`${la.id}:${item.id}`; if(!state.items[k]) state.items[k]={_id:k,checked:false,qty:'',year:''}; });
-  });
-}
+// ══ PROJECT MANAGEMENT ══
+function newProject(){saveST();ST.pid='p'+Date.now();ST.pname='New Estimate';ST.bathrooms.inst=[{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}];ST.bedrooms.inst=[{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}];ST.living.inst=[{id:'la1',name:'Living / Common'}];ST.agentName=localStorage.getItem(AK)||'';blankItems();saveST();closePanel();render();showToast('New estimate created');}
+function switchProject(id){if(id===ST.pid){closePanel();return;}saveST();const p=loadProjects().find(x=>x.id===id);if(p){loadProject(p);render();}closePanel();}
+function renameProject(id,cur){openModal('Rename Estimate','e.g. 123 Main St',cur,n=>{const l=loadProjects(),p=l.find(x=>x.id===id);if(p){p.name=n;saveProjects(l);}if(id===ST.pid){ST.pname=n;renderHeader();}refreshPanel();showToast('Renamed');});}
+function deleteProject(id,name){if(!confirm(`Delete "${name}"?`))return;saveProjects(loadProjects().filter(p=>p.id!==id));if(id===ST.pid)newProject();else refreshPanel();showToast('Deleted');}
 
-// ── Project Management ─────────────────────
-function newProject() {
-  saveCurrentState();
-  state.currentProjectId = 'p_' + Date.now();
-  state.currentProjectName = 'New Estimate';
-  state.bathrooms.instances = [{id:'b1',name:'Bathroom 1'},{id:'b2',name:'Bathroom 2'}];
-  state.bedrooms.instances = [{id:'bd1',name:'Bedroom 1'},{id:'bd2',name:'Bedroom 2'}];
-  state.livingAreas.instances = [{id:'la1',name:'Living / Common'}];
-  state.agentName = localStorage.getItem(AGENT_KEY)||'';
-  initBlankState();
-  saveCurrentState();
-  closePanel();
-  render();
-  showToast('New estimate created');
-}
+// ══ MODAL ══
+let _mc=null;
+function openModal(title,ph,val,cb){_mc=cb;document.getElementById('modal-title').textContent=title;const i=document.getElementById('modal-input');i.placeholder=ph||'';i.value=val||'';document.getElementById('modal-wrap').classList.add('show');setTimeout(()=>{i.focus();i.select();},80);}
+function closeModal(){document.getElementById('modal-wrap').classList.remove('show');_mc=null;}
+function confirmModal(){const v=document.getElementById('modal-input').value.trim();if(v&&_mc)_mc(v);closeModal();}
+document.getElementById('modal-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmModal();if(e.key==='Escape')closeModal();});
 
-function switchProject(id) {
-  if(id===state.currentProjectId){ closePanel(); return; }
-  saveCurrentState();
-  const proj = loadProjects().find(p=>p.id===id);
-  if(proj){ loadProjectIntoState(proj); render(); }
-  closePanel();
-}
-
-function renameProject(id, currentName) {
-  openModal('Rename Estimate', 'e.g. 123 Main St, Tulsa', currentName, (name)=>{
-    const list = loadProjects();
-    const proj = list.find(p=>p.id===id);
-    if(proj){ proj.name=name; saveProjects(list); }
-    if(id===state.currentProjectId){ state.currentProjectName=name; renderHeader(); }
-    refreshPanelList();
-    showToast('Renamed');
-  });
-}
-
-function deleteProject(id, name) {
-  if(!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-  saveProjects(loadProjects().filter(p=>p.id!==id));
-  if(id===state.currentProjectId){ newProject(); }
-  else refreshPanelList();
-  showToast('Deleted');
-}
-
-// ── Modal ──────────────────────────────────
-let _modalCallback = null;
-function openModal(title, placeholder, defaultVal, onConfirm) {
-  _modalCallback = onConfirm;
-  document.getElementById('modal-title').textContent = title;
-  const inp = document.getElementById('modal-input');
-  inp.placeholder = placeholder||'';
-  inp.value = defaultVal||'';
-  document.getElementById('modal-wrap').classList.add('show');
-  setTimeout(()=>{ inp.focus(); inp.select(); },80);
-}
-function closeModal() { document.getElementById('modal-wrap').classList.remove('show'); _modalCallback=null; }
-function confirmModal() { const v=document.getElementById('modal-input').value.trim(); if(v&&_modalCallback) _modalCallback(v); closeModal(); }
-document.getElementById('modal-input').addEventListener('keydown', e=>{ if(e.key==='Enter') confirmModal(); if(e.key==='Escape') closeModal(); });
-
-// ── Panel ──────────────────────────────────
-function openPanel() {
-  refreshPanelList();
-  const panel   = document.getElementById('side-panel');
-  const overlay = document.getElementById('panel-overlay');
-  panel.classList.remove('closing');
-  overlay.classList.remove('hiding');
-  panel.classList.add('open');
-  overlay.classList.add('show');
-}
-
-function closePanel() {
-  const panel   = document.getElementById('side-panel');
-  const overlay = document.getElementById('panel-overlay');
-  panel.classList.remove('open');
-  panel.classList.add('closing');
-  overlay.classList.remove('show');
-  overlay.classList.add('hiding');
-  setTimeout(() => {
-    panel.classList.remove('closing');
-    overlay.classList.remove('hiding');
-  }, 340);
-}
-
-function refreshPanelList() {
-  const list = loadProjects();
-  const el = document.getElementById('panel-list');
-  if(!list.length){
-    el.innerHTML=`<div style="padding:28px 16px;text-align:center">
-      <div style="font-size:28px;margin-bottom:8px">📋</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.25);font-weight:500">No saved estimates yet</div>
-    </div>`;
-    return;
-  }
-  el.innerHTML = list.map(p=>{
-    const active = p.id===state.currentProjectId;
-    const date = p.savedAt ? new Date(p.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-    return `<div style="display:flex;align-items:center;padding:4px 8px;gap:4px;${active?'background:rgba(59,130,246,0.1)':''}">
-      <button onclick="switchProject('${p.id}')" style="flex:1;text-align:left;padding:9px 10px;background:none;border:none;cursor:pointer;border-radius:9px;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.04)'" onmouseleave="this.style.background='none'">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-          ${active?`<span style="width:5px;height:5px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>`:''}
-          <div style="font-size:13px;font-weight:${active?700:500};color:${active?'#93c5fd':'rgba(255,255,255,0.8)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">${p.name}</div>
+// ══ PANEL ══
+function openPanel(){refreshPanel();document.getElementById('side-panel').classList.remove('closing');document.getElementById('panel-overlay').classList.remove('hiding');document.getElementById('side-panel').classList.add('open');document.getElementById('panel-overlay').classList.add('show');}
+function closePanel(){const p=document.getElementById('side-panel'),o=document.getElementById('panel-overlay');p.classList.remove('open');p.classList.add('closing');o.classList.remove('show');o.classList.add('hiding');setTimeout(()=>{p.classList.remove('closing');o.classList.remove('hiding');},340);}
+function refreshPanel(){
+  const l=loadProjects(),el=document.getElementById('panel-list');
+  if(!l.length){el.innerHTML=`<div style="padding:28px 16px;text-align:center"><div style="font-size:26px;margin-bottom:7px">📋</div><div style="font-size:12px;color:rgba(255,255,255,.25);font-weight:500">No saved estimates yet</div></div>`;return;}
+  el.innerHTML=l.map(p=>{
+    const act=p.id===ST.pid;
+    const dt=p.savedAt?new Date(p.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+    return `<div style="display:flex;align-items:center;padding:3px 7px;gap:3px;${act?'background:rgba(59,130,246,.1)':''}">
+      <button onclick="switchProject('${p.id}')" style="flex:1;text-align:left;padding:8px 9px;background:none;border:none;cursor:pointer;border-radius:8px">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+          ${act?'<span style="width:5px;height:5px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>':''}
+          <div style="font-size:13px;font-weight:${act?700:500};color:${act?'#93c5fd':'rgba(255,255,255,.8)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:155px">${p.name}</div>
         </div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.28);padding-left:${active?'11px':'0'}">${date}${active?' · Active':''}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.28);padding-left:${act?'10px':'0'}">${dt}${act?' · Active':''}</div>
       </button>
-      <button onclick="renameProject('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:6px;background:none;border:none;border-radius:7px;cursor:pointer;color:rgba(255,255,255,0.3);flex-shrink:0;transition:color 0.15s,background 0.15s" onmouseenter="this.style.color='rgba(255,255,255,0.7)';this.style.background='rgba(255,255,255,0.07)'" onmouseleave="this.style.color='rgba(255,255,255,0.3)';this.style.background='none'">${ICONS.pencil}</button>
-      ${!active?`<button onclick="deleteProject('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:6px;background:none;border:none;border-radius:7px;cursor:pointer;color:rgba(239,68,68,0.4);flex-shrink:0;transition:color 0.15s,background 0.15s" onmouseenter="this.style.color='#f87171';this.style.background='rgba(239,68,68,0.08)'" onmouseleave="this.style.color='rgba(239,68,68,0.4)';this.style.background='none'">${ICONS.trash}</button>`:'<div style="width:28px"></div>'}
+      <button onclick="renameProject('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:5px;background:none;border:none;border-radius:6px;cursor:pointer;color:rgba(255,255,255,.3)">${IC.pen}</button>
+      ${!act?`<button onclick="deleteProject('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:5px;background:none;border:none;border-radius:6px;cursor:pointer;color:rgba(239,68,68,.4)">${IC.trash}</button>`:'<div style="width:24px"></div>'}
     </div>`;
   }).join('');
 }
 
-// ── Settings ───────────────────────────────
-function openSettings() {
-  document.getElementById('agent-name-input').value = state.agentName||'';
-  const sheet = document.getElementById('settings-sheet');
-  sheet.classList.add('show');
-  document.getElementById('settings-box').style.transform='translateY(0)';
-}
-function closeSettings() {
-  localStorage.setItem(AGENT_KEY, state.agentName||'');
-  const sheet = document.getElementById('settings-sheet');
-  sheet.classList.remove('show');
-  document.getElementById('settings-box').style.transform='translateY(40px)';
+// ══ SETTINGS ══
+function openSettings(){document.getElementById('agent-name-input').value=ST.agentName||'';document.getElementById('settings-sheet').classList.add('show');document.getElementById('settings-box').style.transform='translateY(0)';}
+function closeSettings(){localStorage.setItem(AK,ST.agentName||'');document.getElementById('settings-sheet').classList.remove('show');document.getElementById('settings-box').style.transform='translateY(40px)';}
+
+// ══ CSV ══
+function parseCsvLine(line){const r=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){r.push(cur.trim());cur='';}else cur+=c;}r.push(cur.trim());return r;}
+function parseCSV(txt){const ls=txt.trim().split(/\r?\n/);const hd=parseCsvLine(ls[0]);return ls.slice(1).filter(l=>l.trim()).map(l=>{const v=parseCsvLine(l);return Object.fromEntries(hd.map((h,i)=>[h.trim(),v[i]??'']));});}
+function handleCsvUpload(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const rows=parseCSV(e.target.result);let n=0;rows.forEach(row=>{if(row.id&&row.cost){ST.po[row.id]=parseFloat(row.cost);n++;}});localStorage.setItem(PK,JSON.stringify(ST.po));document.getElementById('price-status').textContent=`✓ ${n} prices updated from ${f.name}`;document.getElementById('price-status').style.color='#10b981';document.getElementById('reset-prices-btn').style.display='block';showToast(`${n} prices updated`);render();}catch{showToast('CSV error');}inp.value='';};r.readAsText(f);}
+function resetPrices(){ST.po={};localStorage.setItem(PK,'{}');document.getElementById('price-status').textContent='Using default prices';document.getElementById('price-status').style.color='';document.getElementById('reset-prices-btn').style.display='none';showToast('Prices reset');render();}
+
+// ══ COST EDIT ══
+let _eid=null;
+function openCostEdit(sk){const rawId=sk.includes(':')?sk.split(':').pop():sk;const def=ITEMS[rawId];if(!def)return;_eid=rawId;document.getElementById('cost-title').textContent=def.name;document.getElementById('cost-unit').textContent=`per ${def.unit}`;document.getElementById('cost-inp').value=getCost(def).toFixed(2);document.getElementById('cost-reset-btn').style.display=ST.po[rawId]!==undefined?'block':'none';document.getElementById('cost-sheet').classList.add('show');document.getElementById('cost-box').style.transform='translateY(0)';setTimeout(()=>{const i=document.getElementById('cost-inp');i.focus();i.select();},80);}
+function closeCostEdit(){document.getElementById('cost-sheet').classList.remove('show');document.getElementById('cost-box').style.transform='translateY(40px)';_eid=null;}
+function saveCostEdit(){if(!_eid)return;const v=parseFloat(document.getElementById('cost-inp').value);if(isNaN(v)||v<0){showToast('Enter a valid price');return;}ST.po[_eid]=v;localStorage.setItem(PK,JSON.stringify(ST.po));closeCostEdit();scheduleSave();renderItems();updateTotal();showToast('Price updated');}
+function resetItemCost(){if(!_eid)return;delete ST.po[_eid];localStorage.setItem(PK,JSON.stringify(ST.po));closeCostEdit();scheduleSave();renderItems();updateTotal();showToast('Price reset');}
+
+// ══ PHOTOS ══
+let _ph=null;
+function triggerPhoto(sk){_ph=sk;const i=document.getElementById('photo-input');i.value='';document.body.appendChild(i);i.click();}
+function handlePhotoCapture(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const MAX=1600,c=document.createElement('canvas');let w=img.width,h=img.height;if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const url=c.toDataURL('image/jpeg',.82);if(!ST.photos[_ph])ST.photos[_ph]=[];ST.photos[_ph].push({url,name:f.name,ts:Date.now()});scheduleSave();renderItems();showToast('Photo added');};img.src=e.target.result;};r.readAsDataURL(f);}
+function removePhoto(sk,i){if(!ST.photos[sk])return;ST.photos[sk].splice(i,1);if(!ST.photos[sk].length)delete ST.photos[sk];scheduleSave();renderItems();}
+
+// ══ SWIPE ══
+function initSwipe(el,onAdd,onClear){
+  let sx=0,sy=0,cx=0,moved=false,locked=false;
+  const T=72;const card=el.querySelector('.item-card');if(!card)return;
+  el.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;cx=0;moved=false;locked=false;},{passive:true});
+  el.addEventListener('touchmove',e=>{const t=e.touches[0];const dx=t.clientX-sx,dy=t.clientY-sy;if(!moved&&Math.abs(dy)>Math.abs(dx)+5){locked=true;}if(locked)return;moved=true;cx=dx;const cl=Math.max(-T*1.4,Math.min(T*1.4,dx));card.style.transform=`translateX(${cl}px)`;card.style.transition='none';},{passive:true});
+  el.addEventListener('touchend',()=>{card.style.transition='';card.style.transform='';if(locked||!moved)return;if(cx>T)onAdd();else if(cx<-T)onClear();},{passive:true});
 }
 
-// ── CSV Price Upload ───────────────────────
-function parseCsvLine(line) {
-  const result=[]; let cur=''; let inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
-    else if(c===','&&!inQ){result.push(cur.trim());cur='';}
-    else cur+=c;
-  }
-  result.push(cur.trim()); return result;
+// ══ ITEM ACTIONS ══
+function toggleItem(sk){if(!ST.items[sk])ST.items[sk]={chk:false,qty:'',yr:''};ST.items[sk].chk=!ST.items[sk].chk;if(!ST.items[sk].chk)ST.items[sk].qty='';scheduleSave();patchCard(sk);updateTotal();updateProg();}
+function clearItem(sk){if(!ST.items[sk])return;ST.items[sk].chk=false;ST.items[sk].qty='';scheduleSave();patchCard(sk);updateTotal();updateProg();}
+function setQty(sk,v){if(!ST.items[sk])return;ST.items[sk].qty=v;scheduleSave();patchTot(sk);updateTotal();}
+function setYear(sk,v){if(!ST.items[sk])return;ST.items[sk].yr=v;scheduleSave();}
+function toggleNA(naKey,gid,prefix){
+  ST.na[naKey]=!ST.na[naKey];
+  if(ST.na[naKey]){const g=GROUPS[gid]||BD_GROUPS.find(x=>x.id===gid)||LA_GROUPS.find(x=>x.id===gid);if(g)(g.ids||[]).forEach(iid=>{const k=prefix?`${prefix}:${iid}`:iid;if(ST.items[k]){ST.items[k].chk=false;ST.items[k].qty='';}});}
+  scheduleSave();renderItems();updateTotal();updateProg();
 }
-function parseCSV(text) {
-  const lines=text.trim().split(/\r?\n/);
-  const headers=parseCsvLine(lines[0]);
-  return lines.slice(1).filter(l=>l.trim()).map(line=>{
-    const vals=parseCsvLine(line);
-    return Object.fromEntries(headers.map((h,i)=>[h.trim(),vals[i]??'']));
-  });
-}
-function handleCsvUpload(input) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try {
-      const rows=parseCSV(e.target.result);
-      let updated=0;
-      rows.forEach(row=>{ if(row.id&&row.cost){ state.priceOverrides[row.id]=parseFloat(row.cost); updated++; } });
-      savePriceOverrides();
-      document.getElementById('price-status').textContent=`✓ ${updated} prices updated from ${file.name}`;
-      document.getElementById('price-status').style.color='var(--green)';
-      document.getElementById('reset-prices-btn').style.display='block';
-      showToast(`${updated} prices updated`);
-      render();
-    } catch { showToast('CSV parse error — check format'); }
-    input.value='';
-  };
-  reader.readAsText(file);
-}
-function resetPrices() {
-  state.priceOverrides={};
-  savePriceOverrides();
-  document.getElementById('price-status').textContent='Using default prices from Pricing_List.csv';
-  document.getElementById('price-status').style.color='';
-  document.getElementById('reset-prices-btn').style.display='none';
-  showToast('Prices reset to defaults');
-  render();
-}
+function patchCard(sk){const w=document.querySelector(`[data-sk="${sk}"] .item-card`);if(!w)return;const rawId=sk.includes(':')?sk.split(':').pop():sk;const def=ITEMS[rawId];const s=ST.items[sk];if(!def||!s)return;w.classList.toggle('chk',!!s.chk);const tot=lineTotal(def,sk);const lt=w.querySelector('.line-tot');if(lt){lt.textContent=tot>0?fmt$(tot):'—';lt.classList.toggle('zero',tot<=0);}}
+function patchTot(sk){const w=document.querySelector(`[data-sk="${sk}"] .item-card`);if(!w)return;const rawId=sk.includes(':')?sk.split(':').pop():sk;const def=ITEMS[rawId];const s=ST.items[sk];if(!def||!s)return;const tot=lineTotal(def,sk);['.line-tot','.exp-tot'].forEach(sel=>{const el=w.querySelector(sel);if(el){el.textContent=tot>0?fmt$(tot):'—';el.classList&&el.classList.toggle('zero',tot<=0);}});}
+function fmt$(n){return '$'+Math.round(n).toLocaleString('en-US');}
 
-// ── Inline Cost Edit ───────────────────────
-let _editingCostId = null;
-function openCostEdit(itemId) {
-  const def = findItemDef(itemId); if(!def) return;
-  _editingCostId = itemId;
-  document.getElementById('cost-edit-title').textContent = def.name;
-  document.getElementById('cost-edit-unit').textContent = `per ${def.unit}`;
-  document.getElementById('cost-edit-input').value = getItemCost(def).toFixed(2);
-  const sheet = document.getElementById('cost-edit-sheet');
-  sheet.style.opacity='1'; sheet.style.pointerEvents='auto';
-  document.getElementById('cost-edit-box').style.transform='translateY(0)';
-  const hasOverride = state.priceOverrides[def.id]!==undefined;
-  document.getElementById('cost-reset-btn').style.display = hasOverride?'block':'none';
-  setTimeout(()=>{ const inp=document.getElementById('cost-edit-input'); inp.focus(); inp.select(); },80);
-}
-function closeCostEdit() {
-  const sheet=document.getElementById('cost-edit-sheet');
-  sheet.style.opacity='0'; sheet.style.pointerEvents='none';
-  document.getElementById('cost-edit-box').style.transform='translateY(40px)';
-  _editingCostId=null;
-}
-function saveCostEdit() {
-  if(!_editingCostId) return;
-  const val=parseFloat(document.getElementById('cost-edit-input').value);
-  if(isNaN(val)||val<0){ showToast('Enter a valid price'); return; }
-  const def=findItemDef(_editingCostId); if(!def) return;
-  state.priceOverrides[def.id]=val;
-  savePriceOverrides();
-  closeCostEdit();
-  scheduleSave();
-  renderActiveItems();
-  updateHeaderTotal();
-  showToast('Price updated');
-}
-function resetItemCost() {
-  if(!_editingCostId) return;
-  const def=findItemDef(_editingCostId); if(!def) return;
-  delete state.priceOverrides[def.id];
-  savePriceOverrides();
-  closeCostEdit();
-  scheduleSave();
-  renderActiveItems();
-  updateHeaderTotal();
-  showToast('Price reset');
-}
+// ══ PHASE 3: RENDER ENGINE ══
 
-// ── Photo Capture ──────────────────────────
-let _photoTargetId = null;
-function triggerPhoto(itemId) {
-  _photoTargetId = itemId;
-  const inp = document.getElementById('photo-input');
-  inp.value='';
-  // Android fix: must append to body before click
-  document.body.appendChild(inp);
-  inp.click();
-}
-function handlePhotoCapture(input) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const img=new Image();
-    img.onload=()=>{
-      const MAX=1600;
-      const canvas=document.createElement('canvas');
-      let w=img.width,h=img.height;
-      if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      const dataUrl=canvas.toDataURL('image/jpeg',0.82);
-      if(!state.photos[_photoTargetId]) state.photos[_photoTargetId]=[];
-      state.photos[_photoTargetId].push({dataUrl, name:file.name, ts:Date.now()});
-      scheduleSave();
-      renderActiveItems();
-      showToast('Photo added');
-    };
-    img.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function removePhoto(itemId, idx) {
-  if(!state.photos[itemId]) return;
-  state.photos[itemId].splice(idx,1);
-  if(!state.photos[itemId].length) delete state.photos[itemId];
-  scheduleSave();
-  renderActiveItems();
-}
-
-// ── Swipe gesture engine ───────────────────
-function initSwipe(el, stateId, onCheck, onClear) {
-  let startX=0, startY=0, curX=0, moved=false, locked=false;
-  const THRESHOLD = 72;
-  const card = el.querySelector('.item-card');
-  if(!card) return;
-
-  function onStart(x,y){ startX=x; startY=y; curX=0; moved=false; locked=false; }
-  function onMove(x,y){
-    const dx=x-startX, dy=y-startY;
-    if(!moved && Math.abs(dy)>Math.abs(dx)+5){ locked=true; } // vertical scroll takes priority
-    if(locked) return;
-    moved=true;
-    curX=dx;
-    const clamped=Math.max(-THRESHOLD*1.4,Math.min(THRESHOLD*1.4,dx));
-    card.style.transform=`translateX(${clamped}px)`;
-    card.style.transition='none';
-  }
-  function onEnd(){
-    card.style.transition='';
-    card.style.transform='';
-    if(locked||!moved) return;
-    if(curX>THRESHOLD){ onCheck(); }
-    else if(curX<-THRESHOLD){ onClear(); }
-  }
-
-  el.addEventListener('touchstart',e=>{ const t=e.touches[0]; onStart(t.clientX,t.clientY); },{passive:true});
-  el.addEventListener('touchmove', e=>{ const t=e.touches[0]; onMove(t.clientX,t.clientY); },{passive:true});
-  el.addEventListener('touchend', onEnd,{passive:true});
-}
-
-// ── Item toggle ────────────────────────────
-function toggleItem(id) {
-  if(!state.items[id]) state.items[id]={_id:id,checked:false,qty:'',year:''};
-  state.items[id].checked = !state.items[id].checked;
-  if(!state.items[id].checked){ state.items[id].qty=''; }
-  scheduleSave();
-  refreshItemCard(id);
-  updateHeaderTotal();
-  updateProgress();
-}
-function clearItem(id) {
-  if(!state.items[id]) return;
-  state.items[id].checked=false;
-  state.items[id].qty='';
-  scheduleSave();
-  refreshItemCard(id);
-  updateHeaderTotal();
-  updateProgress();
-}
-function updateQty(id, val) {
-  if(!state.items[id]) return;
-  state.items[id].qty=val;
-  scheduleSave();
-  refreshItemTotal(id);
-  updateHeaderTotal();
-}
-function updateYear(id, val) {
-  if(!state.items[id]) return;
-  state.items[id].year=val;
-  scheduleSave();
-}
-
-// ── Format helpers ─────────────────────────
-function fmt$(n){ return '$'+Math.round(n).toLocaleString('en-US'); }
-function fmtDate(iso){ if(!iso)return ''; try{ return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch{return '';} }
-
-// ── Header rendering & shrink ──────────────
-let _lastTotal = 0;
-function renderHeader() {
-  const el = document.getElementById('header-root');
-  if(!el) return;
-  const total = calcRunningTotal();
-  const prog = calcProgress();
-  const pct = prog.total ? Math.round(prog.checked/prog.total*100) : 0;
-  const C = 2*Math.PI*14; // circumference for r=14
-  const offset = C - (pct/100)*C;
-  el.innerHTML = `
-    <div id="app-header" class="pt-safe">
-      <div style="padding:8px 16px 0;display:flex;justify-content:space-between;align-items:center">
-        <button onclick="openPanel()" style="padding:6px;background:rgba(255,255,255,0.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,0.7)">${ICONS.menu}</button>
-        <div style="display:flex;align-items:center;gap:5px">
-          <span style="color:#3b82f6">${ICONS.spark}</span>
-          <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:rgba(255,255,255,0.6);text-transform:uppercase">Spark Estimator</span>
-        </div>
-        <div style="display:flex;gap:2px">
-          <button onclick="openSettings()" style="padding:6px;background:rgba(255,255,255,0.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,0.7)">${ICONS.settings}</button>
-          <button onclick="exportPackage()" style="padding:6px;background:rgba(255,255,255,0.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,0.7)">${ICONS.export}</button>
-        </div>
-      </div>
-
-      <!-- Expanded header -->
-      <div id="header-expanded" style="padding:8px 16px 10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:baseline;gap:6px">
-              <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.32);text-transform:uppercase">Running Total</span>
-            </div>
-            <div id="total-display-main" class="total-display" style="font-size:28px;color:white;line-height:1.1;margin-top:1px">${fmt$(total)}</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
-              <button onclick="openModal('Rename Estimate','e.g. 123 Main St','${state.currentProjectName}',(n)=>{state.currentProjectName=n;renderHeader();scheduleSave();})" style="display:flex;align-items:center;gap:4px;background:none;border:none;cursor:pointer;padding:0">
-                <span style="font-size:11px;color:rgba(255,255,255,0.4);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${state.currentProjectName}</span>
-                <span style="color:rgba(255,255,255,0.25)">${ICONS.pencil}</span>
-              </button>
-              <span style="color:rgba(255,255,255,0.15);font-size:10px">·</span>
-              <span id="groups-reviewed-label" style="font-size:10px;color:rgba(255,255,255,0.25)">${prog.checked}/${prog.total} groups</span>
-            </div>
-          </div>
-          <!-- Progress ring -->
-          <div style="position:relative;flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center">
-            <svg width="40" height="40" class="progress-ring">
-              <circle cx="20" cy="20" r="14" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
-              <circle class="progress-ring-fill" cx="20" cy="20" r="14" fill="none"
-                stroke="${pct===100?'#10b981':'#3b82f6'}" stroke-width="3"
-                stroke-dasharray="${C}" stroke-dashoffset="${offset}"/>
-            </svg>
-            <div style="position:absolute;font-size:9.5px;font-weight:800;color:${pct===100?'#10b981':'rgba(255,255,255,0.7)'}">${pct}%</div>
+function renderCard(iid,prefix){
+  const sk=prefix?`${prefix}:${iid}`:iid;
+  const def=ITEMS[iid];if(!def)return'';
+  const s=ST.items[sk]||{chk:false,qty:'',yr:''};
+  const chk=!!s.chk;const cost=getCost(def);const tot=lineTotal(def,sk);
+  const photos=ST.photos[sk]||[];
+  return `<div class="item-wrap" data-sk="${sk}">
+    <div class="item-bg-chk">${IC.swR}<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85);margin-left:5px">Add</span></div>
+    <div class="item-bg-clr"><span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85);margin-right:5px">Clear</span>${IC.swL}</div>
+    <div class="item-card${chk?' chk':''}" onclick="toggleItem('${sk}')">
+      <div style="display:flex;align-items:flex-start;gap:9px">
+        <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${chk?'var(--accent)':'var(--border2)'};background:${chk?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s">${chk?IC.chk:''}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:${chk?600:500};color:var(--t${chk?1:2});line-height:1.3">${def.name}</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap">
+            <button onclick="event.stopPropagation();openCostEdit('${sk}')" class="cost-chip">${IC.money} $${cost.toFixed(2)} / ${def.unit}${ST.po[iid]!==undefined?'<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;margin-left:2px">edited</span>':''}</button>
+            ${def.needYear?'<span class="yr-badge">📷 Year req.</span>':''}
           </div>
         </div>
+        <div class="line-tot${tot<=0?' zero':''}">${tot>0?fmt$(tot):'—'}</div>
       </div>
-
-      <!-- Compact header (shown when scrolled) -->
-      <div id="header-compact" style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 8px;gap:12px">
-        <div id="total-display-compact" class="total-display" style="font-size:18px;font-weight:700;color:white">${fmt$(total)}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.35);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${state.currentProjectName}</div>
-      </div>
-
-      <!-- Section tabs -->
-      <div class="scroll-x" style="background:rgba(255,255,255,0.04);border-top:1px solid rgba(255,255,255,0.06);display:flex" id="section-tabs">
-        ${CATEGORIES.map((cat,i)=>{
-          const tot=calcCategoryTotal(cat);
-          const active=i===state.currentCat;
-          return `<button class="section-tab${active?' active':''}" onclick="switchCat(${i})">
-            ${cat.name}${tot>0?`<span class="tab-badge">${fmt$(tot).replace('$','')}</span>`:''}
-          </button>`;
-        }).join('')}
-      </div>
-    </div>
-  `;
-
-  // Scroll shrink observer
-  const scrollArea = document.getElementById('scroll-area');
-  if(scrollArea) {
-    scrollArea.onscroll = ()=>{
-      const h = document.getElementById('app-header');
-      if(!h) return;
-      if(scrollArea.scrollTop>60) h.classList.add('shrunk');
-      else h.classList.remove('shrunk');
-    };
-  }
-  _lastTotal = total;
-}
-
-function updateHeaderTotal() {
-  const total = calcRunningTotal();
-  const m = document.getElementById('total-display-main');
-  const c = document.getElementById('total-display-compact');
-  if(m){ m.textContent=fmt$(total); m.classList.add('bump'); setTimeout(()=>m.classList.remove('bump'),400); }
-  if(c){ c.textContent=fmt$(total); }
-  // Update tab badges
-  const tabs = document.querySelectorAll('.section-tab');
-  CATEGORIES.forEach((cat,i)=>{
-    const tab=tabs[i]; if(!tab) return;
-    const tot=calcCategoryTotal(cat);
-    const badge=tab.querySelector('.tab-badge');
-    if(tot>0){
-      if(badge) badge.textContent=fmt$(tot).replace('$','');
-      else tab.innerHTML=`${cat.name}<span class="tab-badge">${fmt$(tot).replace('$','')}</span>`;
-    } else {
-      if(badge) badge.remove();
-    }
-  });
-  _lastTotal = total;
-}
-
-function updateProgress() {
-  const prog = calcProgress();
-  const pct = prog.total ? Math.round(prog.checked/prog.total*100) : 0;
-  const C = 2*Math.PI*14;
-  const offset = C - (pct/100)*C;
-  const ring = document.querySelector('.progress-ring-fill');
-  if(ring){ ring.style.strokeDashoffset=offset; ring.setAttribute('stroke',pct===100?'#10b981':'#3b82f6'); }
-  const ringPctLabel = document.querySelector('#header-expanded > div:first-child > div:last-child > div');
-  if(ringPctLabel){ ringPctLabel.textContent=`${pct}%`; ringPctLabel.style.color = pct===100?'#10b981':'rgba(255,255,255,0.7)'; }
-  const progLabel = document.getElementById('groups-reviewed-label');
-  if(progLabel) progLabel.textContent=`${prog.checked}/${prog.total} groups`;
-}
-
-// ── Category switching ─────────────────────
-function switchCat(i) {
-  state.currentCat = i;
-  // Update active tab
-  document.querySelectorAll('.section-tab').forEach((t,idx)=>{ t.classList.toggle('active',idx===i); });
-  renderActiveItems();
-  const scrollArea = document.getElementById('scroll-area');
-  if(scrollArea) scrollArea.scrollTop=0;
-}
-
-// ── Group toggle ───────────────────────────
-function toggleGroup(gid) {
-  if(state.expandedGroups.has(gid)) state.expandedGroups.delete(gid);
-  else state.expandedGroups.add(gid);
-  // Toggle classes without full re-render
-  const card = document.querySelector(`[data-gid="${gid}"]`);
-  if(card){ card.classList.toggle('open', state.expandedGroups.has(gid)); }
-}
-
-// ── Render helpers ─────────────────────────
-function refreshItemCard(id) {
-  const card = document.querySelector(`[data-item-id="${id}"]`);
-  if(!card) return;
-  const s = state.items[id];
-  const def = findItemDef(id);
-  if(!def||!s) return;
-  card.classList.toggle('is-checked', !!s.checked);
-  const totalEl = card.querySelector('.line-total');
-  if(totalEl){ const q=parseFloat(s.qty)||0; const c=getItemCost(def); const raw=q*c; const t=def.min?Math.max(raw,def.min):raw; totalEl.textContent=t>0?fmt$(t):'—'; totalEl.classList.toggle('zero',t<=0); }
-}
-function refreshItemTotal(id) {
-  const card = document.querySelector(`[data-item-id="${id}"]`);
-  if(!card) return;
-  const s = state.items[id];
-  const def = findItemDef(id);
-  if(!def||!s) return;
-  const q=parseFloat(s.qty)||0;
-  const c=getItemCost(def);
-  const raw=q*c;
-  const t=def.min?Math.max(raw,def.min):raw;
-  const totalEl=card.querySelector('.line-total');
-  if(totalEl){ totalEl.textContent=t>0?fmt$(t):'—'; totalEl.classList.toggle('zero',t<=0); }
-}
-
-// ── Stubs for phases 2-7 ──────────────────
-function renderActiveItems() { const el=document.getElementById('items-area'); if(el) el.innerHTML=`<div class="empty-state"><div style="font-size:48px;margin-bottom:12px">🏗️</div><div style="font-size:16px;font-weight:600;color:var(--text-2);margin-bottom:6px">Phase 2 Coming Next</div><div style="font-size:13px">All 75 repair items + 19 groups will appear here</div></div>`; }
-function exportPackage() { showToast('Export ready in Phase 5'); }
-
-// ── Toast ──────────────────────────────────
-let _toastTimer;
-function showToast(msg) {
-  const el=document.getElementById('toast');
-  el.textContent=msg;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
-}
-
-// ── Main render ────────────────────────────
-function render() {
-  document.getElementById('app').innerHTML = `
-    <div class="app-shell" style="display:flex;flex-direction:column">
-      <div id="header-root"></div>
-
-      <!-- Spacer to push content below fixed header -->
-      <div id="header-spacer" style="height:200px;flex-shrink:0"></div>
-
-      <!-- Content area -->
-      <div id="scroll-area" class="scroll-y" style="flex:1;padding-bottom:100px">
-        <div id="items-area" style="padding:12px 14px 0"></div>
-      </div>
-
-      <!-- Bottom nav -->
-      <div id="bottom-nav">
-        <div style="display:flex;gap:10px">
-          <button id="btn-prev" onclick="switchCat(Math.max(0,state.currentCat-1))" style="flex:1;padding:13px;border-radius:12px;border:2px solid var(--accent);background:white;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s">← Prev</button>
-          <button id="btn-next" onclick="handleNextBtn()" style="flex:1;padding:13px;border-radius:12px;border:none;background:var(--accent);color:white;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s">Next →</button>
+      <div class="qty-row">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:9px;border-top:1px solid var(--border);flex-wrap:wrap" onclick="event.stopPropagation()">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:11px;font-weight:600;color:var(--t3)">QTY</span>
+            <input type="number" inputmode="decimal" min="0" step="any" class="qty-inp" value="${s.qty||''}" placeholder="0" onclick="event.stopPropagation()" oninput="event.stopPropagation();setQty('${sk}',this.value)" style="width:68px"/>
+            <span style="font-size:11px;color:var(--t3)">${def.unit}</span>
+          </div>
+          ${def.needYear?`<div style="display:flex;align-items:center;gap:5px"><span style="font-size:11px;font-weight:600;color:var(--t3)">YEAR</span><input type="number" inputmode="numeric" min="1950" max="2030" style="width:65px;padding:5px 7px;font-size:15px;border:1.5px solid var(--border2);border-radius:7px;outline:none;background:white;color:var(--t1)" value="${s.yr||''}" placeholder="${new Date().getFullYear()}" onclick="event.stopPropagation()" oninput="event.stopPropagation();setYear('${sk}',this.value)"/></div>`:''}
+          <div style="display:flex;align-items:center;gap:5px;margin-left:auto">
+            <span style="font-size:11px;font-weight:600;color:var(--t3)">TOTAL</span>
+            <span class="line-tot exp-tot" style="font-size:16px;${tot<=0?'color:var(--t3)':''}">${tot>0?fmt$(tot):'—'}</span>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap" onclick="event.stopPropagation()">
+          ${photos.map((p,i)=>`<div class="photo-thumb"><img src="${p.url}" alt=""/><div class="photo-rm" onclick="event.stopPropagation();removePhoto('${sk}',${i})">✕</div></div>`).join('')}
+          <button onclick="event.stopPropagation();triggerPhoto('${sk}')" style="display:flex;align-items:center;gap:5px;padding:5px 9px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:8px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer">${IC.cam} ${photos.length?photos.length+' photo'+(photos.length>1?'s':''):'Add Photo'}</button>
         </div>
       </div>
     </div>
-  `;
-  renderHeader();
-  renderActiveItems();
-  updateBottomNav();
-
-  // Set header spacer height dynamically
-  setTimeout(()=>{
-    const h=document.getElementById('app-header');
-    const spacer=document.getElementById('header-spacer');
-    if(h&&spacer) spacer.style.height=h.offsetHeight+'px';
-  },50);
+  </div>`;
 }
 
-function handleNextBtn() {
-  if(state.currentCat < CATEGORIES.length-1) switchCat(state.currentCat+1);
-  else { state.view='summary'; renderSummaryView(); }
-}
-
-function updateBottomNav() {
-  const prev=document.getElementById('btn-prev');
-  const next=document.getElementById('btn-next');
-  if(!prev||!next) return;
-  if(state.currentCat===0){ prev.style.opacity='0.3'; prev.style.pointerEvents='none'; } else { prev.style.opacity='1'; prev.style.pointerEvents='auto'; }
-  if(state.currentCat>=CATEGORIES.length-1){ next.textContent='View Summary →'; next.style.background='#059669'; }
-  else { next.textContent='Next →'; next.style.background='var(--accent)'; }
-}
-
-function renderSummaryView() {
-  document.getElementById('app').innerHTML=`
-    <div style="min-height:100vh;background:var(--surface-2)">
-      <div style="background:var(--blue-900);padding:max(40px,env(safe-area-inset-top)) 16px 24px" class="pt-safe">
-        <button onclick="state.view='main';render();" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;padding:0">
-          ${ICONS.back} Back to Estimate
-        </button>
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:4px">Total Estimate</div>
-        <div class="total-display" style="font-size:44px;color:white">${fmt$(calcRunningTotal())}</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.35);margin-top:6px">${state.currentProjectName}</div>
-      </div>
-      <div style="padding:14px">
-        <div style="background:white;border-radius:16px;padding:18px;border:1px solid var(--border);box-shadow:var(--shadow-card);margin-bottom:10px;text-align:center">
-          <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Phase 6</div>
-          <div style="font-size:15px;font-weight:600;color:var(--text-2)">Deal Analyzer will appear here</div>
-          <div style="font-size:12px;color:var(--text-3);margin-top:4px">ARV · Max Offer · Profit Score</div>
+function renderGrp(gid,prefix,customLabel){
+  const g=GROUPS[gid]||BD_GROUPS.find(x=>x.id===gid)||LA_GROUPS.find(x=>x.id===gid);if(!g)return'';
+  const cardKey=prefix?`${prefix}:${gid}`:gid;
+  const naKey=`${cardKey}:na`;const na=!!ST.na[naKey];
+  const open=ST.open.has(cardKey);const done=isGrpDone(gid,prefix);
+  const gTot=calcGrpTotal(gid,prefix);const label=customLabel||g.label;
+  const cnt=(g.ids||[]).filter(iid=>{const s=ST.items[prefix?`${prefix}:${iid}`:iid];return s&&s.chk;}).length;
+  return `<div class="grp-card${open?' open':''}${na?' no-act':done?' done':''}" data-gid="${cardKey}">
+    <button class="grp-hdr" onclick="toggleGrp('${cardKey}')">
+      <div style="flex:1;min-width:0;text-align:left">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:14px;font-weight:700;color:var(--t1)">${label}</span>
+          ${na?`<span style="font-size:10px;color:#10b981;font-weight:700;background:#f0fdf4;padding:1px 7px;border-radius:20px;border:1px solid #86efac">No Action</span>`:''}
+          ${!na&&cnt>0?`<span style="font-size:10px;font-weight:700;background:var(--accent);color:white;padding:1px 7px;border-radius:20px">${cnt}</span>`:''}
         </div>
-        <button onclick="exportPackage()" class="btn-primary" style="margin-bottom:10px">
-          ${ICONS.export} Export ZIP (Excel + Photos)
-        </button>
-        <button onclick="state.view='main';render();" class="btn-secondary">← Back to Estimate</button>
+        ${gTot>0?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;font-family:'DM Mono',monospace">${fmt$(gTot)}</div>`:''}
       </div>
-    </div>
-  `;
+      <span class="grp-chev">${IC.chev}</span>
+    </button>
+    <div class="grp-body"><div class="grp-items">
+      <button class="na-btn${na?' active':''}" onclick="toggleNA('${naKey}','${gid}','${prefix||''}')">
+        <div style="width:15px;height:15px;border-radius:4px;border:2px solid ${na?'#10b981':'var(--border2)'};background:${na?'#10b981':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s">${na?IC.chkG:''}</div>
+        <span style="font-size:12px;font-weight:600;color:${na?'#065f46':'var(--t3)'}">No Action Needed</span>
+      </button>
+      ${na?'':(g.ids||[]).map(iid=>renderCard(iid,prefix)).join('')}
+    </div></div>
+  </div>`;
 }
 
-// ── Bootstrap ──────────────────────────────
-(function init() {
-  state.priceOverrides = loadPriceOverrides();
-  state.agentName = localStorage.getItem(AGENT_KEY)||'';
+function renderMiscGrp(ids){
+  const cardKey='misc-interior';const open=ST.open.has(cardKey);
+  const tot=ids.reduce((t,iid)=>t+lineTotal(ITEMS[iid],iid),0);
+  return `<div class="grp-card${open?' open':''}" data-gid="${cardKey}">
+    <button class="grp-hdr" onclick="toggleGrp('${cardKey}')">
+      <div style="flex:1;text-align:left">
+        <span style="font-size:14px;font-weight:700;color:var(--t1)">General & Wrap-Up</span>
+        ${tot>0?`<div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;font-family:'DM Mono',monospace">${fmt$(tot)}</div>`:''}
+      </div>
+      <span class="grp-chev">${IC.chev}</span>
+    </button>
+    <div class="grp-body"><div class="grp-items">${ids.map(iid=>renderCard(iid,null)).join('')}</div></div>
+  </div>`;
+}
 
-  const projects = loadProjects();
-  if(projects.length) {
-    loadProjectIntoState(projects[0]);
+function renderRoomTabs(stKey,instList,cur,catId){
+  return `<div class="room-tab-bar">
+    ${instList.map((inst,i)=>`<button class="room-tab${i===cur?' active':''}" onclick="switchRoom('${stKey}',${i})">${inst.name}</button>`).join('')}
+    <button class="room-tab-add" onclick="addRoom('${stKey}','${catId}')">＋</button>
+    ${instList.length>1?`<button class="room-tab-add" style="font-size:14px;color:#ef4444" onclick="removeRoom('${stKey}','${catId}')">✕</button>`:''}
+  </div>`;
+}
+
+function renderItems(){
+  const el=document.getElementById('items-area');if(!el)return;
+  const sec=SECTIONS[ST.cat];if(!sec){el.innerHTML='';return;}
+  let html='';
+
+  if(sec.multi==='bathrooms'){
+    const inst=ST.bathrooms.inst;const cur=ST.bathrooms.cur;const b=inst[cur];
+    html+=renderRoomTabs('bathrooms',inst,cur,'bathroom');
+    if(b){html+=sec.groups.map(gid=>renderGrp(gid,b.id)).join('');}
+  } else if(sec.multi==='bedrooms'){
+    const inst=ST.bedrooms.inst;const cur=ST.bedrooms.cur;const b=inst[cur];
+    html+=renderRoomTabs('bedrooms',inst,cur,'bedroom');
+    if(b){html+=BD_GROUPS.map(g=>renderGrp(g.id,b.id)).join('');}
+  } else if(sec.multi==='living'){
+    const inst=ST.living.inst;const cur=ST.living.cur;const la=inst[cur];
+    html+=renderRoomTabs('living',inst,cur,'living');
+    if(la){html+=LA_GROUPS.map(g=>renderGrp(g.id,la.id)).join('');}
   } else {
-    state.currentProjectId = 'p_' + Date.now();
-    state.currentProjectName = 'New Estimate';
-    initBlankState();
-    saveCurrentState();
+    html+=sec.groups.map(gid=>renderGrp(gid,null)).join('');
+    if(sec.misc&&sec.misc.length)html+=renderMiscGrp(sec.misc);
   }
 
+  el.innerHTML=html;
+
+  // Attach swipe listeners
+  el.querySelectorAll('[data-sk]').forEach(wrap=>{
+    const sk=wrap.getAttribute('data-sk');
+    initSwipe(wrap,()=>{if(!ST.items[sk]?.chk)toggleItem(sk);},()=>{if(ST.items[sk]?.chk)clearItem(sk);});
+  });
+}
+
+function toggleGrp(cardKey){
+  if(ST.open.has(cardKey))ST.open.delete(cardKey);else ST.open.add(cardKey);
+  const card=document.querySelector(`[data-gid="${cardKey}"]`);if(card)card.classList.toggle('open',ST.open.has(cardKey));
+}
+
+function switchRoom(stKey,idx){
+  ST[stKey].cur=idx;renderItems();
+}
+
+function addRoom(stKey,catId){
+  const inst=ST[stKey].inst;const num=inst.length+1;
+  const label=catId==='bathroom'?`Bathroom ${num}`:catId==='bedroom'?`Bedroom ${num}`:`Living Area ${num}`;
+  const id=`${catId[0]}${Date.now()}`;
+  inst.push({id,name:label});ST[stKey].cur=inst.length-1;
+  const grps=catId==='bathroom'?['ba:vanity','ba:tubshower','ba:tile'].map(gid=>GROUPS[gid]):catId==='bedroom'?BD_GROUPS:LA_GROUPS;
+  grps.forEach(g=>{(g?.ids||[]).forEach(iid=>{const k=`${id}:${iid}`;if(!ST.items[k])ST.items[k]={chk:false,qty:'',yr:''};});});
+  scheduleSave();renderItems();showToast(`${label} added`);
+}
+
+function removeRoom(stKey,catId){
+  const inst=ST[stKey].inst;if(inst.length<=1){showToast('At least 1 room required');return;}
+  const rm=inst[ST[stKey].cur];if(!confirm(`Remove ${rm.name}?`))return;
+  const grps=catId==='bathroom'?['ba:vanity','ba:tubshower','ba:tile'].map(gid=>GROUPS[gid]):catId==='bedroom'?BD_GROUPS:LA_GROUPS;
+  grps.forEach(g=>{(g?.ids||[]).forEach(iid=>{delete ST.items[`${rm.id}:${iid}`];});});
+  inst.splice(ST[stKey].cur,1);ST[stKey].cur=Math.min(ST[stKey].cur,inst.length-1);
+  scheduleSave();renderItems();showToast(`${rm.name} removed`);
+}
+
+// ══ HEADER ══
+function renderHeader(){
+  const el=document.getElementById('hdr-root');if(!el)return;
+  const tot=calcTotal();const prog=calcProgress();
+  const pct=prog.tot?Math.round(prog.chk/prog.tot*100):0;
+  const C=2*Math.PI*16;const off=C-(pct/100)*C;
+  el.innerHTML=`<div id="app-header" class="${document.getElementById('scroll-area')?.scrollTop>60?'shrunk':''}">
+    <div style="padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center">
+      <button onclick="openPanel()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.menu}</button>
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="color:#3b82f6">${IC.spark}</span>
+        <span style="font-size:11px;font-weight:800;letter-spacing:.12em;color:rgba(255,255,255,.55);text-transform:uppercase">Spark Estimator</span>
+      </div>
+      <div style="display:flex;gap:2px">
+        <button onclick="openSettings()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.cog}</button>
+        <button onclick="exportPackage()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.exp}</button>
+      </div>
+    </div>
+    <div id="hdr-exp" style="padding:10px 16px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.32);text-transform:uppercase;margin-bottom:1px">Running Total</div>
+          <div id="tot-main" class="tot-disp" style="font-size:32px;color:white;line-height:1.05">${fmt$(tot)}</div>
+          <button onclick="openModal('Rename Estimate','e.g. 123 Main St','${ST.pname}',(n)=>{ST.pname=n;renderHeader();scheduleSave();})" style="display:flex;align-items:center;gap:5px;margin-top:4px;background:none;border:none;cursor:pointer;padding:0">
+            <span style="font-size:11px;color:rgba(255,255,255,.4);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ST.pname}</span>
+            <span style="color:rgba(255,255,255,.22)">${IC.pen}</span>
+          </button>
+        </div>
+        <div style="position:relative;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center">
+          <svg width="44" height="44" class="prog-ring">
+            <circle cx="22" cy="22" r="16" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3.5"/>
+            <circle class="prog-fill" cx="22" cy="22" r="16" fill="none" stroke="${pct===100?'#10b981':'#3b82f6'}" stroke-width="3.5" stroke-dasharray="${C}" stroke-dashoffset="${off}"/>
+          </svg>
+          <div style="position:absolute;font-size:10px;font-weight:800;color:${pct===100?'#10b981':'rgba(255,255,255,.7)'}">${pct}%</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.25)">${prog.chk} of ${prog.tot} groups reviewed</div>
+    </div>
+    <div id="hdr-cmp" style="display:flex;align-items:center;justify-content:space-between;padding:7px 16px 10px;gap:12px">
+      <div class="tot-disp" style="font-size:20px;font-weight:700;color:white">${fmt$(tot)}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.35);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${ST.pname}</div>
+    </div>
+    <div class="scroll-x" style="background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.06);display:flex">
+      ${SECTIONS.map((sec,i)=>{
+        const st=calcSecTotal(sec);
+        return `<button class="sec-tab${i===ST.cat?' active':''}" onclick="switchSec(${i})">${sec.name}${st>0?`<span class="tab-bdg">${fmt$(st).replace('$','').replace(/,\d{3}$/,k=>k)}</span>`:''}</button>`;
+      }).join('')}
+    </div>
+  </div>`;
+  // Re-attach scroll listener
+  const sa=document.getElementById('scroll-area');
+  if(sa)sa.onscroll=()=>{const h=document.getElementById('app-header');if(!h)return;if(sa.scrollTop>60)h.classList.add('shrunk');else h.classList.remove('shrunk');};
+  // Update spacer
+  setTimeout(()=>{const h=document.getElementById('app-header');const sp=document.getElementById('hdr-spacer');if(h&&sp)sp.style.height=h.offsetHeight+'px';},60);
+}
+
+function updateTotal(){
+  const tot=calcTotal();
+  const m=document.getElementById('tot-main');
+  if(m){m.textContent=fmt$(tot);m.classList.add('bump');setTimeout(()=>m.classList.remove('bump'),400);}
+  // Update tab badges
+  document.querySelectorAll('.sec-tab').forEach((tab,i)=>{
+    const sec=SECTIONS[i];if(!sec)return;
+    const st=calcSecTotal(sec);
+    let bdg=tab.querySelector('.tab-bdg');
+    if(st>0){
+      const txt=fmt$(st).replace('$','');
+      if(bdg)bdg.textContent=txt;
+      else{bdg=document.createElement('span');bdg.className='tab-bdg';bdg.textContent=txt;tab.appendChild(bdg);}
+    } else if(bdg)bdg.remove();
+  });
+}
+
+function updateProg(){
+  const prog=calcProgress();const pct=prog.tot?Math.round(prog.chk/prog.tot*100):0;
+  const C=2*Math.PI*16;const off=C-(pct/100)*C;
+  const ring=document.querySelector('.prog-fill');
+  if(ring){ring.style.strokeDashoffset=off;ring.setAttribute('stroke',pct===100?'#10b981':'#3b82f6');}
+  const label=document.querySelector('#hdr-exp div:last-child');
+  if(label)label.textContent=`${prog.chk} of ${prog.tot} groups reviewed`;
+  const pctEl=document.querySelector('.prog-ring ~ div');
+  if(pctEl){pctEl.textContent=pct+'%';pctEl.style.color=pct===100?'#10b981':'rgba(255,255,255,.7)';}
+}
+
+function switchSec(i){
+  ST.cat=i;
+  document.querySelectorAll('.sec-tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+  renderItems();
+  const sa=document.getElementById('scroll-area');if(sa)sa.scrollTop=0;
+}
+
+// ══ EXPORT STUB ══
+function exportPackage(){showToast('Export ready in Phase 5');}
+
+// ══ SUMMARY VIEW ══
+function renderSummary(){
+  const tot=calcTotal();
+  document.getElementById('app').innerHTML=`
+  <div class="app-shell" style="min-height:100vh">
+    <div style="background:linear-gradient(165deg,#16213e,#0f172a,#0a1224);padding:max(40px,env(safe-area-inset-top)) 16px 24px">
+      <button onclick="ST.view='main';render();" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:rgba(255,255,255,.5);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;padding:0">${IC.back} Back to Estimate</button>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:4px">Total Estimate</div>
+      <div class="tot-disp" style="font-size:44px;color:white">${fmt$(tot)}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.35);margin-top:5px">${ST.pname}</div>
+    </div>
+    <div style="padding:14px">
+      ${SECTIONS.map(sec=>{const st=calcSecTotal(sec);if(!st)return'';return`<div style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;border:1px solid var(--border);box-shadow:var(--sh)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--t1)">${sec.name}</span><span style="font-family:'DM Mono',monospace;font-weight:600;font-size:15px;color:var(--accent)">${fmt$(st)}</span></div></div>`;}).join('')}
+      <div style="background:var(--navy);border-radius:14px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:15px;font-weight:800;color:white">Grand Total</span>
+          <span style="font-family:'DM Mono',monospace;font-weight:700;font-size:20px;color:#93c5fd">${fmt$(tot)}</span>
+        </div>
+      </div>
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--border);box-shadow:var(--sh)">
+        <div style="font-size:13px;font-weight:700;color:var(--t2);margin-bottom:10px">Deal Analyzer — coming in Phase 6</div>
+        <div style="font-size:12px;color:var(--t3)">ARV · Max Offer (70% rule) · Profit Score</div>
+      </div>
+      <button onclick="exportPackage()" class="btn-pri" style="margin-bottom:10px">${IC.exp} Export ZIP (Excel + Photos)</button>
+      <button onclick="ST.view='main';render();" class="btn-sec">${IC.back} Back to Estimate</button>
+    </div>
+  </div>`;
+}
+
+// ══ TOAST ══
+let _tt;function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2200);}
+
+// ══ MAIN RENDER ══
+function render(){
+  if(ST.view==='summary'){renderSummary();return;}
+  document.getElementById('app').innerHTML=`
+  <div class="app-shell" style="display:flex;flex-direction:column;min-height:100vh">
+    <div id="hdr-root"></div>
+    <div id="hdr-spacer" style="height:200px;flex-shrink:0"></div>
+    <div id="scroll-area" class="scroll-y" style="flex:1;padding-bottom:90px">
+      <div id="items-area" style="padding:12px 14px 0"></div>
+    </div>
+    <div id="bottom-nav">
+      <div style="display:flex;gap:10px">
+        <button id="btn-prev" onclick="if(ST.cat>0)switchSec(ST.cat-1)" style="flex:1;padding:13px;border-radius:12px;border:2px solid var(--accent);background:white;color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;opacity:${ST.cat===0?0.3:1};pointer-events:${ST.cat===0?'none':'auto'}">← Prev</button>
+        <button id="btn-next" onclick="handleNext()" style="flex:1;padding:13px;border-radius:12px;border:none;background:${ST.cat>=SECTIONS.length-1?'#059669':'var(--accent)'};color:white;font-size:14px;font-weight:700;cursor:pointer">${ST.cat>=SECTIONS.length-1?'View Summary →':'Next →'}</button>
+      </div>
+    </div>
+  </div>`;
+  renderHeader();renderItems();
+}
+
+function handleNext(){if(ST.cat<SECTIONS.length-1){switchSec(ST.cat+1);}else{ST.view='summary';renderSummary();}}
+
+// ══ BOOTSTRAP ══
+(function init(){
+  try{ST.po=JSON.parse(localStorage.getItem(PK)||'{}');}catch{ST.po={};}
+  ST.agentName=localStorage.getItem(AK)||'';
+  const projects=loadProjects();
+  if(projects.length){loadProject(projects[0]);}
+  else{ST.pid='p'+Date.now();ST.pname='New Estimate';blankItems();saveST();}
   render();
-
-  // Auto-save on tab switch / close
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') saveCurrentState(); });
-  window.addEventListener('pagehide', saveCurrentState);
-
-  // PWA: inline manifest + service worker
-  const manifest = {
-    name: 'Spark Estimator',
-    short_name: 'Estimator',
-    description: 'Field repair cost estimator for Spark Homes acquisition team',
-    start_url: './',
-    display: 'standalone',
-    background_color: '#0f172a',
-    theme_color: '#0f172a',
-    orientation: 'portrait-primary',
-    icons: [
-      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230f172a'/%3E%3Cpath d='M108 24L48 112h60l-8 56 76-80h-64l-4-64z' fill='%233b82f6'/%3E%3C/svg%3E", sizes: '192x192', type: 'image/svg+xml' },
-      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Cpath d='M284 64L128 296h160l-20 152 204-212h-172l-16-172z' fill='%233b82f6'/%3E%3C/svg%3E", sizes: '512x512', type: 'image/svg+xml' }
-    ]
-  };
-  const mBlob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
-  const mUrl = URL.createObjectURL(mBlob);
-  const mLink = document.createElement('link');
-  mLink.rel='manifest'; mLink.href=mUrl;
-  document.head.appendChild(mLink);
-
-  // Inline Service Worker
-  const swCode = `
-    const CACHE='spark-v3';
-    const ASSETS=['/'];
-    self.addEventListener('install',e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
-    self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
-    self.addEventListener('fetch',e=>{ if(e.request.method!=='GET')return; e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{ if(res&&res.status===200){ const clone=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,clone)); } return res; }))); });
-  `;
-  const swBlob = new Blob([swCode],{type:'application/javascript'});
-  const swUrl = URL.createObjectURL(swBlob);
-  if('serviceWorker' in navigator) navigator.serviceWorker.register(swUrl,{scope:'./'}).catch(()=>{});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveST();});
+  window.addEventListener('pagehide',saveST);
+  // PWA manifest
+  const mf={name:'Spark Estimator',short_name:'Estimator',start_url:'./',display:'standalone',background_color:'#0f172a',theme_color:'#0f172a',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230f172a'/%3E%3Cpath d='M108 24L48 112h60l-8 56 76-80h-64l-4-64z' fill='%233b82f6'/%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'}]};
+  const mb=new Blob([JSON.stringify(mf)],{type:'application/json'});
+  const ml=document.createElement('link');ml.rel='manifest';ml.href=URL.createObjectURL(mb);document.head.appendChild(ml);
+  // Service Worker
+  const sw=`const C='spark-v5';self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['/'])).then(()=>self.skipWaiting()));});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(res&&res.status===200){const clone=res.clone();caches.open(C).then(c=>c.put(e.request,clone));}return res;})));});`;
+  if('serviceWorker' in navigator){const sb=new Blob([sw],{type:'application/javascript'});navigator.serviceWorker.register(URL.createObjectURL(sb),{scope:'./'}).catch(()=>{});}
 })();
 </script>
 </body>
