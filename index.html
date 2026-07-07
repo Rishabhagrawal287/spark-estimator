@@ -765,11 +765,6 @@ function buildExport(){
   }catch(e){console.error(e);toast('Export error — check console');}
 }
 function renderDeal(){
-  const tot=calcTotal();const arv=parseFloat(ST.arv)||0;const pur=parseFloat(ST.purchase)||0;
-  const maxOffer=arv>0?Math.max(0,arv*0.70-tot):0;
-  const costBasis=pur+tot;const profit=arv>0?arv-costBasis:0;
-  const margin=arv>0?(profit/arv*100):0;
-  const score=margin>20?['🟢','STRONG DEAL','d1fae5','065f46']:margin>10?['🟡','MARGINAL','fef3c7','92400e']:['🔴','PASS','fee2e2','991b1b'];
   return `<div style="background:#fff;border-radius:16px;padding:18px;margin-bottom:12px;border:1px solid var(--bdr);box-shadow:var(--sh)">
     <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:12px;display:flex;align-items:center;gap:7px">🏦 Deal Analyzer <span style="font-size:10px;font-weight:600;color:var(--t3);background:var(--sur2);padding:2px 8px;border-radius:20px">70% Rule</span></div>
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -777,18 +772,27 @@ function renderDeal(){
         <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">After Repair Value (ARV)</div>
         <div style="display:flex;align-items:center;border:1.5px solid var(--bdr2);border-radius:10px;overflow:hidden;background:#fff">
           <span style="padding:0 10px;font-size:15px;color:var(--t3)">$</span>
-          <input type="number" inputmode="decimal" min="0" style="flex:1;padding:10px 8px 10px 0;font-size:16px;font-family:'DM Mono',monospace;border:none;outline:none;color:var(--t1)" value="${ST.arv||''}" placeholder="e.g. 180000" oninput="ST.arv=this.value;updDeal()"/>
+          <input id="arvinp" type="number" inputmode="decimal" min="0" style="flex:1;padding:10px 8px 10px 0;font-size:16px;font-family:'DM Mono',monospace;border:none;outline:none;color:var(--t1)" value="${ST.arv||''}" placeholder="e.g. 180000" oninput="ST.arv=this.value;sched();updDealResults();"/>
         </div>
       </div>
       <div style="flex:1;min-width:120px">
         <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Purchase Price</div>
         <div style="display:flex;align-items:center;border:1.5px solid var(--bdr2);border-radius:10px;overflow:hidden;background:#fff">
           <span style="padding:0 10px;font-size:15px;color:var(--t3)">$</span>
-          <input type="number" inputmode="decimal" min="0" style="flex:1;padding:10px 8px 10px 0;font-size:16px;font-family:'DM Mono',monospace;border:none;outline:none;color:var(--t1)" value="${ST.purchase||''}" placeholder="e.g. 95000" oninput="ST.purchase=this.value;updDeal()"/>
+          <input id="purinp" type="number" inputmode="decimal" min="0" style="flex:1;padding:10px 8px 10px 0;font-size:16px;font-family:'DM Mono',monospace;border:none;outline:none;color:var(--t1)" value="${ST.purchase||''}" placeholder="e.g. 95000" oninput="ST.purchase=this.value;sched();updDealResults();"/>
         </div>
       </div>
     </div>
-    <div style="background:var(--sur2);border-radius:12px;padding:14px;margin-bottom:12px">
+    <div id="dealresults">${renderDealResults()}</div>
+  </div>`;
+}
+function renderDealResults(){
+  const tot=calcTotal();const arv=parseFloat(ST.arv)||0;const pur=parseFloat(ST.purchase)||0;
+  const maxOffer=arv>0?Math.max(0,arv*0.70-tot):0;
+  const costBasis=pur+tot;const profit=arv>0?arv-costBasis:0;
+  const margin=arv>0?(profit/arv*100):0;
+  const score=margin>20?['🟢','STRONG DEAL','d1fae5','065f46']:margin>10?['🟡','MARGINAL','fef3c7','92400e']:['🔴','PASS','fee2e2','991b1b'];
+  return `<div style="background:var(--sur2);border-radius:12px;padding:14px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">
         <span style="font-size:12px;color:var(--t2)">Total Repair Cost</span>
         <span style="font-family:'DM Mono',monospace;font-weight:600;font-size:13px;color:var(--acc)">${fmt$(tot)}</span>
@@ -811,10 +815,9 @@ function renderDeal(){
         <div style="font-size:16px;font-weight:800;color:#${score[3]}">${score[0]} ${score[1]}</div>
         <div style="font-size:12px;color:#${score[3]};margin-top:2px">Profit margin: ${margin.toFixed(1)}%  ·  Max Offer: ${fmt$(maxOffer)}</div>
       </div>
-    </div>`:'<div style="padding:12px;background:var(--sur2);border-radius:12px;text-align:center;font-size:12px;color:var(--t3)">Enter ARV and Purchase Price to see deal score</div>'}
-  </div>`;
+    </div>`:'<div style="padding:12px;background:var(--sur2);border-radius:12px;text-align:center;font-size:12px;color:var(--t3)">Enter ARV and Purchase Price to see deal score</div>'}`;
 }
-function updDeal(){const d=document.getElementById('dealwrap');if(d)d.innerHTML=renderDeal();}
+function updDealResults(){const d=document.getElementById('dealresults');if(d)d.innerHTML=renderDealResults();}
 function renderSummary(){
   const tot=calcTotal();
   document.getElementById('app').innerHTML=`<div class="shell" style="min-height:100vh">
