@@ -17,7 +17,7 @@
 html,body{height:100%;margin:0;overscroll-behavior:none}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#e8edf3;color:#0f172a}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
-input[type=number]{-moz-appearance:textfield}
+input[type=number]{-moz-appearance:textfield; appearance:textfield}
 .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .scroll-x::-webkit-scrollbar{display:none}
 .scroll-y{overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -97,7 +97,7 @@ input[type=number]{-moz-appearance:textfield}
 #mwrap.on #mbox{transform:scale(1) translateY(0)}
 .bsheet{position:fixed;inset:0;z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
 .bsheet.on{opacity:1;pointer-events:auto}
-.bsbg{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px)}
+.bsbg{position:absolute;inset:0;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .bsbox{position:relative;width:100%;background:#fff;border-radius:24px 24px 0 0;padding:24px 20px;padding-bottom:max(24px,env(safe-area-inset-bottom));box-shadow:var(--shf);transform:translateY(40px);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:80vh;overflow-y:auto}
 .bsheet.on .bsbox{transform:translateY(0)}
 .pthumb{position:relative;width:68px;height:68px;border-radius:10px;overflow:hidden;flex-shrink:0;border:1.5px solid var(--bdr)}
