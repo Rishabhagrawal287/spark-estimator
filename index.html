@@ -57,8 +57,8 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
 .gc.open .gbody{max-height:4000px}
 .gitems{padding:0 10px 10px}
 .iw{position:relative;margin-bottom:6px;border-radius:12px;overflow:hidden}
-.ibg-add{position:absolute;inset:0;background:linear-gradient(90deg,#1d4ed8,#3b82f6);display:flex;align-items:center;padding-left:18px;border-radius:12px}
-.ibg-clr{position:absolute;inset:0;background:linear-gradient(270deg,#ef4444,#f87171);display:flex;align-items:center;justify-content:flex-end;padding-right:18px;border-radius:12px}
+.ibg-add{position:absolute;inset:0;background:linear-gradient(90deg,#1d4ed8,#3b82f6);display:flex;align-items:center;padding-left:18px;border-radius:12px;opacity:0;transition:opacity .1s linear}
+.ibg-clr{position:absolute;inset:0;background:linear-gradient(270deg,#ef4444,#f87171);display:flex;align-items:center;justify-content:flex-end;padding-right:18px;border-radius:12px;opacity:0;transition:opacity .1s linear}
 .ic{position:relative;background:var(--sur2);border-radius:12px;padding:11px 13px;border:1px solid var(--bdr);cursor:pointer;transition:background .2s,border-color .2s;touch-action:pan-y;z-index:1}
 .ic.chk{background:#eff6ff;border-color:var(--acc3)}
 .qrow{max-height:0;overflow:hidden;opacity:0;transition:max-height .28s cubic-bezier(.4,0,.2,1),opacity .2s}
@@ -498,11 +498,37 @@ function removePhoto(sk,i){if(!ST.photos[sk])return;ST.photos[sk].splice(i,1);if
 function initSwipe(el,onAdd,onClr){
   let sx=0,sy=0,cx=0,moved=false,locked=false;const T=72;
   const card=el.querySelector('.ic');if(!card)return;
+  const bgAdd=el.querySelector('.ibg-add');
+  const bgClr=el.querySelector('.ibg-clr');
   el.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;cx=0;moved=false;locked=false;},{passive:true});
-  el.addEventListener('touchmove',e=>{const t=e.touches[0];const dx=t.clientX-sx,dy=t.clientY-sy;if(!moved&&Math.abs(dy)>Math.abs(dx)+5){locked=true;}if(locked)return;moved=true;cx=dx;const cl=Math.max(-T*1.4,Math.min(T*1.4,dx));card.style.transform=`translateX(${cl}px)`;card.style.transition='none';},{passive:true});
-  el.addEventListener('touchend',()=>{card.style.transition='';card.style.transform='';if(locked||!moved)return;if(cx>T)onAdd();else if(cx<-T)onClr();},{passive:true});
+  el.addEventListener('touchmove',e=>{
+    const t=e.touches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
+    if(!moved&&Math.abs(dy)>Math.abs(dx)+5){locked=true;}
+    if(locked)return;
+    moved=true;cx=dx;
+    const cl=Math.max(-T*1.4,Math.min(T*1.4,dx));
+    card.style.transition='none';
+    card.style.transform=`translateX(${cl}px)`;
+    if(bgAdd&&bgClr){
+      if(cl>4){bgAdd.style.opacity='1';bgClr.style.opacity='0';}
+      else if(cl<-4){bgAdd.style.opacity='0';bgClr.style.opacity='1';}
+      else{bgAdd.style.opacity='0';bgClr.style.opacity='0';}
+    }
+  },{passive:true});
+  el.addEventListener('touchend',()=>{
+    card.style.transition='transform .2s cubic-bezier(.4,0,.2,1)';
+    card.style.transform='';
+    if(bgAdd)bgAdd.style.opacity='0';
+    if(bgClr)bgClr.style.opacity='0';
+    if(locked||!moved)return;
+    _justSwiped=true;
+    setTimeout(()=>{_justSwiped=false;},400);
+    if(cx>T)onAdd();else if(cx<-T)onClr();
+  },{passive:true});
 }
+let _justSwiped=false;
 function toggleItem(sk){if(!ST.items[sk])ST.items[sk]={chk:false,qty:'',yr:''};ST.items[sk].chk=!ST.items[sk].chk;if(!ST.items[sk].chk)ST.items[sk].qty='';sched();patchCard(sk);updTot();updProg();}
+function handleCardClick(sk){if(_justSwiped){_justSwiped=false;return;}toggleItem(sk);}
 function clearItem(sk){if(!ST.items[sk])return;ST.items[sk].chk=false;ST.items[sk].qty='';sched();patchCard(sk);updTot();updProg();}
 function setQty(sk,v){if(!ST.items[sk])return;ST.items[sk].qty=v;sched();patchTot(sk);updTot();}
 function setYr(sk,v){if(!ST.items[sk])return;ST.items[sk].yr=v;sched();}
@@ -523,7 +549,7 @@ function renderCard(iid,pfx){
   return `<div class="iw" data-sk="${sk}">
     <div class="ibg-add">${IC.swR}<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85);margin-left:5px">Add</span></div>
     <div class="ibg-clr"><span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85);margin-right:5px">Clear</span>${IC.swL}</div>
-    <div class="ic${chk?' chk':''}" onclick="toggleItem('${sk}')">
+    <div class="ic${chk?' chk':''}" onclick="handleCardClick('${sk}')">
       <div style="display:flex;align-items:flex-start;gap:9px">
         <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${chk?'var(--acc)':'var(--bdr2)'};background:${chk?'var(--acc)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s">${chk?IC.chkW:''}</div>
         <div style="flex:1;min-width:0">
