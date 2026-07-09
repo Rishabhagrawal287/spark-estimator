@@ -125,7 +125,7 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
         <div style="font-size:9px;font-weight:800;letter-spacing:.16em;color:#3b82f6;text-transform:uppercase;margin-bottom:3px">Spark Homes</div>
         <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-.02em">My Estimates</div>
       </div>
-      <button onclick="closePanel()" style="width:27px;height:27px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;color:rgba(255,255,255,.5);flex-shrink:0">
+      <button onclick="closePanel()" aria-label="Close menu" style="width:27px;height:27px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;cursor:pointer;color:rgba(255,255,255,.5);flex-shrink:0">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
@@ -142,7 +142,7 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
   <div id="mbg" onclick="closeModal()"></div>
   <div id="mbox">
     <h3 id="mtitle" style="font-size:17px;font-weight:700;color:var(--t1);margin:0 0 14px"></h3>
-    <input id="minp" type="text" style="width:100%;padding:11px 13px;font-size:16px;border:1.5px solid var(--bdr2);border-radius:10px;outline:none;font-family:inherit;color:var(--t1)"/>
+    <input id="minp" type="text" aria-label="Estimate name" placeholder="Estimate name" style="width:100%;padding:11px 13px;font-size:16px;border:1.5px solid var(--bdr2);border-radius:10px;outline:none;font-family:inherit;color:var(--t1)"/>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn-s" onclick="closeModal()" style="font-size:14px">Cancel</button>
       <button class="btn-p" onclick="confirmModal()" style="font-size:14px">Save</button>
@@ -162,7 +162,7 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Upload Updated Prices (CSV)
       </div>
-      <input type="file" accept=".csv" id="csvinp" style="display:none" onchange="handleCsv(this)"/>
+      <input type="file" accept=".csv" id="csvinp" aria-label="Upload CSV price file" style="display:none" onchange="handleCsv(this)"/>
     </label>
     <button id="rstprice" onclick="resetPrices()" style="display:none;width:100%;padding:10px;border-radius:10px;border:1.5px solid #fecaca;background:none;color:#ef4444;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px">Reset to Default Prices</button>
     <hr style="border:none;border-top:1px solid var(--bdr);margin:14px 0"/>
@@ -179,7 +179,7 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
     <p id="ceunit" style="font-size:12px;color:var(--t3);margin:0 0 14px"></p>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <span style="font-size:22px;font-weight:700;color:var(--t2)">$</span>
-      <input id="ceinp" type="number" step="0.01" min="0" inputmode="decimal" style="flex:1;padding:12px 13px;font-size:20px;font-family:'DM Mono',monospace;font-weight:600;border:2px solid var(--acc2);border-radius:12px;outline:none;color:var(--t1)"/>
+      <input id="ceinp" type="number" step="0.01" min="0" inputmode="decimal" aria-label="Unit cost" placeholder="0.00" style="flex:1;padding:12px 13px;font-size:20px;font-family:'DM Mono',monospace;font-weight:600;border:2px solid var(--acc2);border-radius:12px;outline:none;color:var(--t1)"/>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn-s" onclick="closeCE()" style="font-size:14px">Cancel</button>
@@ -189,7 +189,7 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
   </div>
 </div>
 <div id="toast"></div>
-<input type="file" id="photoinp" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)"/>
+<input type="file" id="photoinp" accept="image/*" capture="environment" aria-label="Take or upload a photo" style="display:none" onchange="handlePhoto(this)"/>
 <div id="app"></div>
 <script>
 'use strict';
@@ -475,8 +475,8 @@ function refreshPanel(){
         <div style="font-size:13px;font-weight:${act?700:500};color:${act?'#93c5fd':'rgba(255,255,255,.8)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:155px">${p.name}</div></div>
         <div style="font-size:10px;color:rgba(255,255,255,.28);padding-left:${act?'10px':'0'}">${dt}${act?' · Active':''}</div>
       </button>
-      <button onclick="renameProj('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:5px;background:none;border:none;border-radius:6px;cursor:pointer;color:rgba(255,255,255,.3)">${IC.pen}</button>
-      ${!act?`<button onclick="delProj('${p.id}','${p.name.replace(/'/g,"&apos;")}')" style="padding:5px;background:none;border:none;border-radius:6px;cursor:pointer;color:rgba(239,68,68,.4)">${IC.trash}</button>`:'<div style="width:24px"></div>'}
+      <button onclick="renameProj('${p.id}','${p.name.replace(/'/g,"&apos;")}')" aria-label="Rename estimate" style="padding:5px;background:none;border:none;border-radius:6px;cursor:pointer;color:rgba(255,255,255,.3)">${IC.pen}</button>
+      ${!act?`<button onclick="delProj('${p.id}','${p.name.replace(/'/g,"&apos;")}')" aria-label="Delete estimate" style="padding:5px;background:none;border:none;border-radius:6px;cursor:pointer;color:rgba(239,68,68,.4)">${IC.trash}</button>`:'<div style="width:24px"></div>'}
     </div>`;
   }).join('');
 }
@@ -549,7 +549,7 @@ function renderCard(iid,pfx){
           </div>
         </div>
         <div style="margin-top:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap" onclick="event.stopPropagation()">
-          ${photos.map((p,i)=>`<div class="pthumb"><img src="${p.url}"/><div class="prm" onclick="event.stopPropagation();removePhoto('${sk}',${i})">✕</div></div>`).join('')}
+          ${photos.map((p,i)=>`<div class="pthumb"><img src="${p.url}" alt="Repair photo"/><div class="prm" role="button" aria-label="Remove photo" onclick="event.stopPropagation();removePhoto('${sk}',${i})">✕</div></div>`).join('')}
           <button onclick="event.stopPropagation();triggerPhoto('${sk}')" style="display:flex;align-items:center;gap:5px;padding:5px 9px;background:var(--sur2);border:1.5px solid var(--bdr2);border-radius:8px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer">${IC.cam} ${photos.length?photos.length+' photo'+(photos.length>1?'s':''):'Add Photo'}</button>
         </div>
       </div>
@@ -603,15 +603,15 @@ function renderItems(){
   let html='';
   if(sec.multi==='bathrooms'){
     const inst=ST.bath.inst,cur=ST.bath.cur,b=inst[cur];
-    html+=`<div class="rtbar">${inst.map((x,i)=>`<button class="rt${i===cur?' on':''}" onclick="switchRoom('bath',${i})">${x.name}</button>`).join('')}<button class="rtadd" onclick="addRoom('bath','bathroom')">＋</button>${inst.length>1?'<button class="rtadd" style="font-size:14px;color:#ef4444" onclick="removeRoom(\'bath\',\'bathroom\')">✕</button>':''}</div>`;
+    html+=`<div class="rtbar">${inst.map((x,i)=>`<button class="rt${i===cur?' on':''}" onclick="switchRoom('bath',${i})">${x.name}</button>`).join('')}<button class="rtadd" onclick="addRoom('bath','bathroom')" aria-label="Add bathroom">＋</button>${inst.length>1?'<button class="rtadd" aria-label="Remove this bathroom" style="font-size:14px;color:#ef4444" onclick="removeRoom(\'bath\',\'bathroom\')">✕</button>':''}</div>`;
     if(b)html+=sec.groups.map(gid=>renderGrp(gid,b.id)).join('');
   } else if(sec.multi==='bedrooms'){
     const inst=ST.bed.inst,cur=ST.bed.cur,b=inst[cur];
-    html+=`<div class="rtbar">${inst.map((x,i)=>`<button class="rt${i===cur?' on':''}" onclick="switchRoom('bed',${i})">${x.name}</button>`).join('')}<button class="rtadd" onclick="addRoom('bed','bedroom')">＋</button>${inst.length>1?'<button class="rtadd" style="font-size:14px;color:#ef4444" onclick="removeRoom(\'bed\',\'bedroom\')">✕</button>':''}</div>`;
+    html+=`<div class="rtbar">${inst.map((x,i)=>`<button class="rt${i===cur?' on':''}" onclick="switchRoom('bed',${i})">${x.name}</button>`).join('')}<button class="rtadd" onclick="addRoom('bed','bedroom')" aria-label="Add bedroom">＋</button>${inst.length>1?'<button class="rtadd" aria-label="Remove this bedroom" style="font-size:14px;color:#ef4444" onclick="removeRoom(\'bed\',\'bedroom\')">✕</button>':''}</div>`;
     if(b)html+=BD_GRPS.map(g=>renderGrp(g.id,b.id)).join('');
   } else if(sec.multi==='living'){
     const inst=ST.liv.inst,cur=ST.liv.cur,la=inst[cur];
-    html+=`<div class="rtbar">${inst.map((x,i)=>`<button class="rt${i===cur?' on':''}" onclick="switchRoom('liv',${i})">${x.name}</button>`).join('')}<button class="rtadd" onclick="addRoom('liv','living')">＋</button>${inst.length>1?'<button class="rtadd" style="font-size:14px;color:#ef4444" onclick="removeRoom(\'liv\',\'living\')">✕</button>':''}</div>`;
+    html+=`<div class="rtbar">${inst.map((x,i)=>`<button class="rt${i===cur?' on':''}" onclick="switchRoom('liv',${i})">${x.name}</button>`).join('')}<button class="rtadd" onclick="addRoom('liv','living')" aria-label="Add living area">＋</button>${inst.length>1?'<button class="rtadd" aria-label="Remove this living area" style="font-size:14px;color:#ef4444" onclick="removeRoom(\'liv\',\'living\')">✕</button>':''}</div>`;
     if(la)html+=LA_GRPS.map(g=>renderGrp(g.id,la.id)).join('');
   } else {
     html+=sec.groups.map(gid=>renderGrp(gid,null)).join('');
@@ -651,7 +651,7 @@ function renderHdr(){
   const C=2*Math.PI*16;const off=C-(pct/100)*C;
   el.innerHTML=`<div id="hdr">
     <div style="padding:10px 14px 0;display:flex;justify-content:space-between;align-items:center">
-      <button onclick="openPanel()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.menu}</button>
+      <button onclick="openPanel()" aria-label="Open menu" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.menu}</button>
       <div style="display:flex;align-items:center;gap:5px"><span style="color:#3b82f6">${IC.spark}</span><span style="font-size:11px;font-weight:800;letter-spacing:.12em;color:rgba(255,255,255,.55);text-transform:uppercase">Spark Estimator</span></div>
       <div style="display:flex;gap:2px">
         <button onclick="openSettings()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.cog}</button>
