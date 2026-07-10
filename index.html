@@ -92,7 +92,7 @@ input[type=number]{-moz-appearance:textfield; appearance:textfield}
 #sp.on #plist>div:nth-child(n+4){animation:stg .28s ease .38s both}
 #mwrap{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
 #mwrap.on{opacity:1;pointer-events:auto}
-#mbg{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}
+#mbg{position:absolute;inset:0;background:rgba(0,0,0,.6);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #mbox{position:relative;background:#fff;border-radius:20px;padding:24px;width:100%;max-width:360px;box-shadow:var(--shf);transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
 #mwrap.on #mbox{transform:scale(1) translateY(0)}
 .bsheet{position:fixed;inset:0;z-index:400;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -680,8 +680,8 @@ function renderHdr(){
       <button onclick="openPanel()" aria-label="Open menu" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.menu}</button>
       <div style="display:flex;align-items:center;gap:5px"><span style="color:#3b82f6">${IC.spark}</span><span style="font-size:11px;font-weight:800;letter-spacing:.12em;color:rgba(255,255,255,.55);text-transform:uppercase">Spark Estimator</span></div>
       <div style="display:flex;gap:2px">
-        <button onclick="openSettings()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.cog}</button>
-        <button onclick="doExport()" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.exp}</button>
+        <button onclick="openSettings()" aria-label="Open settings" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.cog}</button>
+        <button onclick="doExport()" aria-label="Export estimate" style="padding:7px;background:rgba(255,255,255,.08);border:none;border-radius:9px;cursor:pointer;color:rgba(255,255,255,.7)">${IC.exp}</button>
       </div>
     </div>
     <div id="hexp" style="padding:10px 16px 14px">
